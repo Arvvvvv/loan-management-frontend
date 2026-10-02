@@ -1,0 +1,1403 @@
+/* =========================================================
+   BUSINESS LOAN MANAGEMENT SYSTEM
+   Modern Financial Dashboard Theme
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --green-dark: #063b24;
+  --green: #087f3d;
+  --green-light: #18a957;
+  --green-soft: #e9f8ef;
+
+  --gold: #f5b942;
+  --gold-light: #ffe7a3;
+
+  --white: #ffffff;
+  --background: #f3f8f5;
+
+  --text: #17261e;
+  --muted: #708078;
+
+  --border: #dce9e1;
+
+  --danger: #dc3d4b;
+  --blue: #3777d4;
+
+  --shadow: 0 12px 35px rgba(7, 60, 35, 0.08);
+  --shadow-hover: 0 18px 45px rgba(7, 60, 35, 0.14);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  background:
+    radial-gradient(circle at 10% 10%, #e4f8eb 0, transparent 28%),
+    radial-gradient(circle at 90% 90%, #fff3cd 0, transparent 25%),
+    var(--background);
+
+  color: var(--text);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 15px;
+
+  background: #e9efeb;
+  color: #173425;
+
+  font-weight: 700;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.primary {
+  position: relative;
+  overflow: hidden;
+
+  background: linear-gradient(
+    135deg,
+    var(--green),
+    var(--green-light)
+  );
+
+  color: #fff;
+
+  box-shadow:
+    0 7px 18px rgba(8, 127, 61, 0.22);
+}
+
+.primary::after {
+  content: "";
+  position: absolute;
+
+  top: 0;
+  left: -100%;
+
+  width: 60%;
+  height: 100%;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.25),
+    transparent
+  );
+
+  transition: left 0.6s ease;
+}
+
+.primary:hover::after {
+  left: 130%;
+}
+
+.primary:hover {
+  background: linear-gradient(
+    135deg,
+    #076d35,
+    #13a451
+  );
+
+  box-shadow:
+    0 12px 25px rgba(8, 127, 61, 0.3);
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.full {
+  width: 100%;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 13px;
+}
+
+/* =========================================================
+   LOGIN / AUTH PAGE
+   ========================================================= */
+
+.auth-page {
+  min-height: 100vh;
+
+  display: grid;
+  place-items: center;
+
+  padding: 30px;
+
+  position: relative;
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at 15% 20%,
+      rgba(24, 169, 87, 0.35),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 85% 80%,
+      rgba(245, 185, 66, 0.3),
+      transparent 30%
+    ),
+    linear-gradient(
+      135deg,
+      #063b24,
+      #087f3d 55%,
+      #0b6335
+    );
+}
+
+/* Decorative money symbols */
+
+.auth-page::before {
+  content: "₱   $   ₱   $   ₱";
+
+  position: absolute;
+
+  top: 10%;
+  left: -20px;
+
+  font-size: 90px;
+  font-weight: 900;
+
+  letter-spacing: 25px;
+
+  color: rgba(255, 255, 255, 0.055);
+
+  transform: rotate(-12deg);
+
+  animation: floatMoney 12s ease-in-out infinite;
+}
+
+.auth-page::after {
+  content: "💰   ₱   💳   ₱";
+
+  position: absolute;
+
+  bottom: 5%;
+  right: -40px;
+
+  font-size: 70px;
+
+  opacity: 0.08;
+
+  transform: rotate(10deg);
+
+  animation: floatMoney2 10s ease-in-out infinite;
+}
+
+@keyframes floatMoney {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-12deg);
+  }
+
+  50% {
+    transform: translateY(-25px) rotate(-8deg);
+  }
+}
+
+@keyframes floatMoney2 {
+  0%,
+  100% {
+    transform: translateY(0) rotate(10deg);
+  }
+
+  50% {
+    transform: translateY(25px) rotate(5deg);
+  }
+}
+
+/* =========================================================
+   AUTH CARD
+   ========================================================= */
+
+.auth-card {
+  position: relative;
+  z-index: 2;
+
+  width: min(450px, 100%);
+
+  background: rgba(255, 255, 255, 0.96);
+
+  border: 1px solid rgba(255, 255, 255, 0.6);
+
+  border-radius: 28px;
+
+  padding: 38px;
+
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.2),
+    0 5px 20px rgba(0, 0, 0, 0.08);
+
+  text-align: center;
+
+  backdrop-filter: blur(15px);
+
+  animation: cardAppear 0.6s ease;
+}
+
+@keyframes cardAppear {
+  from {
+    opacity: 0;
+    transform: translateY(25px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.logo {
+  width: 78px;
+  height: 78px;
+
+  margin: 0 auto 14px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 24px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #f6c84b,
+      #eaa51f
+    );
+
+  font-size: 42px;
+
+  box-shadow:
+    0 12px 30px rgba(245, 185, 66, 0.35);
+
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.auth-card h1 {
+  margin: 10px 0 8px;
+
+  font-size: 32px;
+  font-weight: 900;
+
+  background:
+    linear-gradient(
+      135deg,
+      #063b24,
+      #16a052
+    );
+
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.auth-card > p {
+  margin-bottom: 0;
+}
+
+/* =========================================================
+   AUTH MONEY STRIP
+   ========================================================= */
+
+.auth-money-strip {
+  display: flex;
+
+  justify-content: center;
+
+  gap: 8px;
+
+  margin-top: 22px;
+
+  flex-wrap: wrap;
+}
+
+.auth-money-strip span {
+  padding: 8px 12px;
+
+  border-radius: 999px;
+
+  background: linear-gradient(
+    135deg,
+    #effaf3,
+    #e5f6eb
+  );
+
+  border: 1px solid #cce8d5;
+
+  color: #08723a;
+
+  font-size: 11px;
+
+  font-weight: 800;
+
+  box-shadow:
+    0 4px 12px rgba(8, 127, 61, 0.06);
+}
+
+/* =========================================================
+   AUTH FORM
+   ========================================================= */
+
+.auth-card form {
+  text-align: left;
+
+  margin-top: 25px;
+}
+
+.auth-card label,
+.loan-form label {
+  display: block;
+
+  font-weight: 750;
+
+  font-size: 13px;
+
+  margin-bottom: 15px;
+
+  color: #284036;
+}
+
+.auth-card input,
+.loan-form input {
+  display: block;
+
+  width: 100%;
+
+  margin-top: 8px;
+
+  padding: 13px 14px;
+
+  border: 1px solid #ccdcd2;
+
+  border-radius: 11px;
+
+  outline: none;
+
+  background: #fbfdfc;
+
+  color: #17261e;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.auth-card input:hover,
+.loan-form input:hover {
+  border-color: #9fc7ad;
+}
+
+.auth-card input:focus,
+.loan-form input:focus {
+  border-color: var(--green);
+
+  background: #fff;
+
+  box-shadow:
+    0 0 0 4px rgba(8, 127, 61, 0.1);
+
+  transform: translateY(-1px);
+}
+
+.error {
+  background: #fff0f0;
+
+  color: #c9323f;
+
+  padding: 11px 13px;
+
+  border-radius: 10px;
+
+  margin: 10px 0;
+
+  font-size: 13px;
+
+  border-left: 4px solid #dc3d4b;
+
+  animation: shake 0.35s ease;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+.switch {
+  margin-top: 20px;
+
+  font-size: 13px;
+
+  color: var(--muted);
+}
+
+.switch button {
+  padding: 0;
+
+  background: none;
+
+  color: var(--green);
+
+  font-weight: 800;
+}
+
+.switch button:hover {
+  color: #055d2d;
+
+  text-decoration: underline;
+
+  transform: none;
+}
+
+/* =========================================================
+   MAIN APPLICATION
+   ========================================================= */
+
+.app {
+  min-height: 100vh;
+
+  display: flex;
+
+  background:
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(245, 185, 66, 0.08),
+      transparent 20%
+    ),
+    var(--background);
+}
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.app aside {
+  width: 240px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #052d1c 0%,
+      #063b24 50%,
+      #07512f 100%
+    );
+
+  color: #fff;
+
+  padding: 22px 15px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  min-height: 100vh;
+
+  position: relative;
+
+  overflow: hidden;
+
+  box-shadow:
+    8px 0 30px rgba(0, 0, 0, 0.08);
+}
+
+.app aside::after {
+  content: "₱";
+
+  position: absolute;
+
+  bottom: -60px;
+  right: -20px;
+
+  font-size: 220px;
+
+  font-weight: 900;
+
+  color: rgba(255, 255, 255, 0.025);
+
+  pointer-events: none;
+}
+
+.brand {
+  font-size: 19px;
+
+  font-weight: 900;
+
+  padding: 10px 12px 28px;
+
+  letter-spacing: -0.3px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+}
+
+.brand::first-letter {
+  color: var(--gold);
+}
+
+.nav {
+  width: 100%;
+
+  text-align: left;
+
+  background: transparent;
+
+  color: #c8ddd1;
+
+  margin: 4px 0;
+
+  padding: 12px 13px;
+
+  border-radius: 11px;
+
+  position: relative;
+
+  z-index: 1;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.nav:hover {
+  background: rgba(255, 255, 255, 0.09);
+
+  color: #fff;
+
+  transform: translateX(3px);
+}
+
+.nav.active {
+  background:
+    linear-gradient(
+      135deg,
+      #168b49,
+      #0f6e3a
+    );
+
+  color: #fff;
+
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.16);
+
+  transform: translateX(3px);
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+
+  font-size: 13px;
+
+  color: #a5bcb0;
+
+  padding: 15px 10px;
+}
+
+.logout {
+  margin-top: 12px;
+
+  width: 100%;
+
+  background: rgba(255, 255, 255, 0.09);
+
+  color: #fff;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logout:hover {
+  background: rgba(220, 61, 75, 0.85);
+
+  color: #fff;
+}
+
+/* =========================================================
+   MAIN CONTENT
+   ========================================================= */
+
+.app main {
+  flex: 1;
+
+  padding: 32px;
+
+  max-width: 1500px;
+
+  margin: auto;
+
+  width: 100%;
+}
+
+header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: flex-start;
+
+  margin-bottom: 28px;
+}
+
+header h2 {
+  margin: 0 0 5px;
+
+  font-size: 31px;
+
+  font-weight: 900;
+
+  color: #123524;
+}
+
+header .muted {
+  margin: 0;
+}
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+
+.toast {
+  background:
+    linear-gradient(
+      135deg,
+      #fff8df,
+      #fff1bd
+    );
+
+  padding: 11px 15px;
+
+  border-radius: 11px;
+
+  border: 1px solid #f0dc98;
+
+  color: #765600;
+
+  box-shadow:
+    0 7px 18px rgba(155, 115, 0, 0.08);
+}
+
+/* =========================================================
+   DASHBOARD STAT CARDS
+   ========================================================= */
+
+.cards {
+  display: grid;
+
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 18px;
+
+  margin-bottom: 24px;
+}
+
+.stat,
+.panel {
+  background: rgba(255, 255, 255, 0.94);
+
+  border: 1px solid var(--border);
+
+  border-radius: 17px;
+
+  box-shadow: var(--shadow);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.stat:hover {
+  transform: translateY(-5px);
+
+  box-shadow: var(--shadow-hover);
+}
+
+.stat {
+  padding: 21px;
+
+  position: relative;
+
+  overflow: hidden;
+}
+
+.stat::after {
+  content: "₱";
+
+  position: absolute;
+
+  right: -12px;
+  bottom: -30px;
+
+  font-size: 105px;
+
+  font-weight: 900;
+
+  color: rgba(8, 127, 61, 0.045);
+}
+
+.stat span {
+  display: block;
+
+  color: #6c7d73;
+
+  font-size: 13px;
+
+  font-weight: 650;
+
+  position: relative;
+
+  z-index: 1;
+}
+
+.stat strong {
+  display: block;
+
+  font-size: 26px;
+
+  margin-top: 9px;
+
+  color: #123c28;
+
+  position: relative;
+
+  z-index: 1;
+}
+
+/* =========================================================
+   PANELS
+   ========================================================= */
+
+.panel {
+  padding: 23px;
+
+  margin-bottom: 21px;
+}
+
+.panel:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.panel h3 {
+  margin: 0 0 7px;
+
+  font-size: 18px;
+}
+
+.panel-title,
+.loan-intro {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: flex-start;
+
+  gap: 20px;
+}
+
+.loan-intro {
+  margin-bottom: 19px;
+}
+
+.loan-intro h3 {
+  font-size: 26px;
+
+  margin: 0 0 5px;
+
+  font-weight: 900;
+}
+
+/* =========================================================
+   LOAN FORM
+   ========================================================= */
+
+.loan-form {
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 5px 18px;
+}
+
+.loan-preview {
+  grid-column: 1 / -1;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ecfaf1,
+      #f6fcf8
+    );
+
+  border: 1px solid #cce7d5;
+
+  border-radius: 13px;
+
+  padding: 18px;
+
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 14px;
+
+  margin: 6px 0;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.loan-preview div {
+  padding: 5px;
+}
+
+.loan-preview div span {
+  display: block;
+
+  color: #66776d;
+
+  font-size: 12px;
+
+  font-weight: 650;
+}
+
+.loan-preview strong {
+  display: block;
+
+  color: #08723a;
+
+  font-size: 20px;
+
+  margin-top: 5px;
+}
+
+.loan-form .actions {
+  grid-column: 1 / -1;
+}
+
+.actions {
+  display: flex;
+
+  gap: 10px;
+
+  margin-top: 5px;
+
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+table {
+  width: 100%;
+
+  border-collapse: separate;
+
+  border-spacing: 0;
+}
+
+th,
+td {
+  text-align: left;
+
+  padding: 14px 11px;
+
+  border-top: 1px solid #edf2ee;
+
+  font-size: 14px;
+}
+
+th {
+  color: #66776d;
+
+  font-size: 11px;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.6px;
+
+  background: #f7faf8;
+}
+
+th:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+th:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+tbody tr {
+  transition: background 0.2s ease;
+}
+
+tbody tr:hover {
+  background: #f4faf6;
+}
+
+/* =========================================================
+   BADGES
+   ========================================================= */
+
+.badge {
+  display: inline-block;
+
+  padding: 6px 10px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.2px;
+}
+
+.badge.active {
+  background: #e4f8eb;
+
+  color: #08723a;
+}
+
+.badge.completed {
+  background: #e8eefb;
+
+  color: #254c8a;
+}
+
+.badge.pending {
+  background: #fff4d6;
+
+  color: #8b6500;
+}
+
+.badge.partial {
+  background: #eaf0ff;
+
+  color: #355aa3;
+}
+
+.badge.paid {
+  background: #e4f8eb;
+
+  color: #08723a;
+}
+
+/* =========================================================
+   LOAN LIST
+   ========================================================= */
+
+.loan-list {
+  display: grid;
+
+  gap: 16px;
+}
+
+.loan-card {
+  border: 1px solid #dfeae3;
+
+  border-radius: 15px;
+
+  padding: 19px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff,
+      #f9fcfa
+    );
+
+  box-shadow:
+    0 5px 18px rgba(7, 60, 35, 0.05);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.loan-card:hover {
+  transform: translateY(-3px);
+
+  border-color: #b8d9c4;
+
+  box-shadow:
+    0 15px 35px rgba(7, 60, 35, 0.1);
+}
+
+.loan-card-top {
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 15px;
+
+  align-items: flex-start;
+}
+
+.loan-card-top h3 {
+  margin: 0 0 5px;
+
+  font-size: 18px;
+}
+
+.loan-details {
+  display: grid;
+
+  grid-template-columns: repeat(6, 1fr);
+
+  gap: 10px;
+
+  margin-top: 18px;
+}
+
+.loan-details div {
+  background:
+    linear-gradient(
+      135deg,
+      #f4f8f5,
+      #eef5f0
+    );
+
+  border-radius: 10px;
+
+  padding: 12px;
+
+  border: 1px solid #e4eee7;
+}
+
+.loan-details span {
+  display: block;
+
+  color: #738176;
+
+  font-size: 11px;
+
+  font-weight: 650;
+}
+
+.loan-details strong {
+  display: block;
+
+  font-size: 14px;
+
+  margin-top: 5px;
+
+  color: #183d2a;
+}
+
+.loan-card-actions {
+  margin-top: 15px;
+
+  display: flex;
+
+  gap: 8px;
+
+  flex-wrap: wrap;
+}
+
+.loan-card-actions button {
+  font-size: 12px;
+}
+
+/* =========================================================
+   PAYMENT SCHEDULE
+   ========================================================= */
+
+.schedule {
+  margin-top: 15px;
+
+  padding: 16px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #f7faf8,
+      #f0f7f2
+    );
+
+  border-radius: 12px;
+
+  border: 1px solid #e0ebe3;
+}
+
+.schedule h4 {
+  margin: 0 0 8px;
+
+  font-size: 15px;
+}
+
+.payment-row {
+  display: grid;
+
+  grid-template-columns: 1.5fr 1fr auto auto;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 12px 0;
+
+  border-top: 1px solid #e1e8e3;
+}
+
+.payment-row span {
+  display: block;
+
+  font-weight: 650;
+}
+
+.payment-row small {
+  display: block;
+
+  color: #748277;
+
+  font-size: 11px;
+
+  margin-top: 3px;
+}
+
+.payment-row button {
+  background:
+    linear-gradient(
+      135deg,
+      #16803c,
+      #10a04e
+    );
+
+  color: #fff;
+
+  padding: 8px 11px;
+
+  box-shadow:
+    0 5px 13px rgba(8, 127, 61, 0.15);
+}
+
+.payment-row button:hover {
+  box-shadow:
+    0 8px 18px rgba(8, 127, 61, 0.25);
+}
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.empty {
+  text-align: center;
+
+  padding: 45px 20px;
+
+  color: #7a8797;
+}
+
+.empty::before {
+  content: "💰";
+
+  display: block;
+
+  font-size: 40px;
+
+  margin-bottom: 10px;
+
+  opacity: 0.65;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1050px) {
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .loan-details {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .app aside {
+    width: 185px;
+  }
+
+  .loan-form {
+    grid-template-columns: 1fr;
+  }
+
+  .loan-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .loan-details {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .payment-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .payment-row button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 650px) {
+  .app {
+    display: block;
+  }
+
+  .app aside {
+    width: 100%;
+
+    min-height: auto;
+
+    border-radius: 0;
+  }
+
+  .sidebar-bottom {
+    margin-top: 15px;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .app main {
+    padding: 18px;
+  }
+
+  header {
+    display: block;
+  }
+
+  header .toast {
+    margin-top: 15px;
+  }
+
+  .loan-intro {
+    display: block;
+  }
+
+  .loan-intro button {
+    margin-top: 10px;
+  }
+
+  .loan-details {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-row {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-row button {
+    grid-column: auto;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+
+  .auth-card {
+    padding: 28px 22px;
+
+    border-radius: 22px;
+  }
+
+  .auth-card h1 {
+    font-size: 27px;
+  }
+}
+
+/* =========================================================
+   SMALL ANIMATION
+   ========================================================= */
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel,
+  .stat,
+  .loan-card {
+    animation: fadeUp 0.45s ease both;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
