@@ -1,0 +1,86 @@
+ .gitignore                                         |  22 [32m+[m[31m---[m
+ BUILD_APK.bat                                      |  33 [32m++++++[m
+ README.md                                          |  63 [31m----------[m
+ {client/android => android}/.gitignore             |   0
+ {client/android => android}/app/.gitignore         |   0
+ {client/android => android}/app/build.gradle       |   0
+ .../android => android}/app/capacitor.build.gradle |   0
+ {client/android => android}/app/proguard-rules.pro |   0
+ .../myapp/ExampleInstrumentedTest.java             |   0
+ .../app/src/main/AndroidManifest.xml               |   0
+ .../java/com/loan/management/MainActivity.java     |   0
+ .../app/src/main/res/drawable-land-hdpi/splash.png | Bin
+ .../app/src/main/res/drawable-land-mdpi/splash.png | Bin
+ .../src/main/res/drawable-land-xhdpi/splash.png    | Bin
+ .../src/main/res/drawable-land-xxhdpi/splash.png   | Bin
+ .../src/main/res/drawable-land-xxxhdpi/splash.png  | Bin
+ .../app/src/main/res/drawable-port-hdpi/splash.png | Bin
+ .../app/src/main/res/drawable-port-mdpi/splash.png | Bin
+ .../src/main/res/drawable-port-xhdpi/splash.png    | Bin
+ .../src/main/res/drawable-port-xxhdpi/splash.png   | Bin
+ .../src/main/res/drawable-port-xxxhdpi/splash.png  | Bin
+ .../res/drawable-v24/ic_launcher_foreground.xml    |   0
+ .../main/res/drawable/ic_launcher_background.xml   |   0
+ .../app/src/main/res/drawable/splash.png           | Bin
+ .../app/src/main/res/layout/activity_main.xml      |   0
+ .../src/main/res/mipmap-anydpi-v26/ic_launcher.xml |   0
+ .../res/mipmap-anydpi-v26/ic_launcher_round.xml    |   0
+ .../app/src/main/res/mipmap-hdpi/ic_launcher.png   | Bin [31m0[m -> [32m10267[m bytes
+ .../res/mipmap-hdpi/ic_launcher_foreground.png     | Bin [31m0[m -> [32m38348[m bytes
+ .../src/main/res/mipmap-hdpi/ic_launcher_round.png | Bin [31m0[m -> [32m10267[m bytes
+ .../app/src/main/res/mipmap-mdpi/ic_launcher.png   | Bin [31m0[m -> [32m5226[m bytes
+ .../res/mipmap-mdpi/ic_launcher_foreground.png     | Bin [31m0[m -> [32m19725[m bytes
+ .../src/main/res/mipmap-mdpi/ic_launcher_round.png | Bin [31m0[m -> [32m5226[m bytes
+ .../app/src/main/res/mipmap-xhdpi/ic_launcher.png  | Bin [31m0[m -> [32m16363[m bytes
+ .../res/mipmap-xhdpi/ic_launcher_foreground.png    | Bin [31m0[m -> [32m62389[m bytes
+ .../main/res/mipmap-xhdpi/ic_launcher_round.png    | Bin [31m0[m -> [32m16363[m bytes
+ .../app/src/main/res/mipmap-xxhdpi/ic_launcher.png | Bin [31m0[m -> [32m31818[m bytes
+ .../res/mipmap-xxhdpi/ic_launcher_foreground.png   | Bin [31m0[m -> [32m127562[m bytes
+ .../main/res/mipmap-xxhdpi/ic_launcher_round.png   | Bin [31m0[m -> [32m31818[m bytes
+ .../src/main/res/mipmap-xxxhdpi/ic_launcher.png    | Bin [31m0[m -> [32m51304[m bytes
+ .../res/mipmap-xxxhdpi/ic_launcher_foreground.png  | Bin [31m0[m -> [32m217438[m bytes
+ .../main/res/mipmap-xxxhdpi/ic_launcher_round.png  | Bin [31m0[m -> [32m51304[m bytes
+ .../src/main/res/values/ic_launcher_background.xml |   4 [32m+[m
+ .../app/src/main/res/values/strings.xml            |   4 [32m+[m[31m-[m
+ .../app/src/main/res/values/styles.xml             |   0
+ .../app/src/main/res/xml/file_paths.xml            |   0
+ .../com/getcapacitor/myapp/ExampleUnitTest.java    |   0
+ {client/android => android}/build.gradle           |   0
+ .../android => android}/capacitor.settings.gradle  |   0
+ {client/android => android}/gradle.properties      |   0
+ .../gradle/wrapper/gradle-wrapper.jar              | Bin
+ .../gradle/wrapper/gradle-wrapper.properties       |   0
+ {client/android => android}/gradlew                |   0
+ {client/android => android}/gradlew.bat            |   0
+ {client/android => android}/settings.gradle        |   0
+ {client/android => android}/variables.gradle       |   0
+ .../capacitor.config.json => capacitor.config.json |   2 [32m+[m[31m-[m
+ .../app/src/main/res/mipmap-hdpi/ic_launcher.png   | Bin [31m2786[m -> [32m0[m bytes
+ .../res/mipmap-hdpi/ic_launcher_foreground.png     | Bin [31m3450[m -> [32m0[m bytes
+ .../src/main/res/mipmap-hdpi/ic_launcher_round.png | Bin [31m4341[m -> [32m0[m bytes
+ .../app/src/main/res/mipmap-mdpi/ic_launcher.png   | Bin [31m1869[m -> [32m0[m bytes
+ .../res/mipmap-mdpi/ic_launcher_foreground.png     | Bin [31m2110[m -> [32m0[m bytes
+ .../src/main/res/mipmap-mdpi/ic_launcher_round.png | Bin [31m2725[m -> [32m0[m bytes
+ .../app/src/main/res/mipmap-xhdpi/ic_launcher.png  | Bin [31m3981[m -> [32m0[m bytes
+ .../res/mipmap-xhdpi/ic_launcher_foreground.png    | Bin [31m5036[m -> [32m0[m bytes
+ .../main/res/mipmap-xhdpi/ic_launcher_round.png    | Bin [31m6593[m -> [32m0[m bytes
+ .../app/src/main/res/mipmap-xxhdpi/ic_launcher.png | Bin [31m6644[m -> [32m0[m bytes
+ .../res/mipmap-xxhdpi/ic_launcher_foreground.png   | Bin [31m9793[m -> [32m0[m bytes
+ .../main/res/mipmap-xxhdpi/ic_launcher_round.png   | Bin [31m10455[m -> [32m0[m bytes
+ .../src/main/res/mipmap-xxxhdpi/ic_launcher.png    | Bin [31m9441[m -> [32m0[m bytes
+ .../res/mipmap-xxxhdpi/ic_launcher_foreground.png  | Bin [31m15529[m -> [32m0[m bytes
+ .../main/res/mipmap-xxxhdpi/ic_launcher_round.png  | Bin [31m15916[m -> [32m0[m bytes
+ .../src/main/res/values/ic_launcher_background.xml |   4 [31m-[m
+ client/index.html => index.html                    |   0
+ client/package-lock.json => package-lock.json      |   0
+ client/package.json => package.json                |   0
+ pocket-money-icon-source.png                       | Bin [31m0[m -> [32m1264232[m bytes
+ public/Business-Loan.apk                           | Bin [31m0[m -> [32m4463782[m bytes
+ scripts/start-new-system.ps1                       |   9 [31m--[m
+ scripts/stop-vite.ps1                              |   9 [31m--[m
+ server                                             |   1 [31m-[m
+ {client/src => src}/api.js                         |   2 [32m+[m[31m-[m
+ {client/src => src}/main.jsx                       |  87 [32m+++++++++++++[m[31m-[m
+ {client/src => src}/styles.css                     | 128 [32m+++++++++++++++++++++[m
+ start-new-system.bat                               |   4 [31m-[m
+ 85 files changed, 257 insertions(+), 115 deletions(-)

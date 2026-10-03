@@ -832,6 +832,74 @@ header .muted {
 }
 
 /* =========================================================
+   APP INSTALL CARD
+   ========================================================= */
+
+.install-app-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  margin-bottom: 22px;
+  background: linear-gradient(135deg, #eaf8ef, #f8fcf9);
+  border: 1px solid #c8e4d1;
+  border-radius: 17px;
+  box-shadow: var(--shadow);
+}
+
+.install-app-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.install-app-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  border-radius: 13px;
+  background: #ffffff;
+  border: 1px solid #d6e9dc;
+  font-size: 24px;
+}
+
+.install-app-card h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  color: #123524;
+}
+
+.install-app-card p {
+  margin: 0;
+}
+
+.install-app-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 11px;
+  background: var(--green);
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 7px 16px rgba(8, 127, 61, 0.18);
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.install-app-button:hover {
+  background: #075f2e;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(8, 127, 61, 0.22);
+}
+
+/* =========================================================
    PANELS
    ========================================================= */
 
@@ -1270,6 +1338,57 @@ tbody tr:hover {
   opacity: 0.65;
 }
 
+
+/* =========================================================
+   LOAN EDIT / DELETE ACTIONS
+   ========================================================= */
+
+.edit-btn {
+  background: #fff4d6;
+  color: #765600;
+  border: 1px solid #efd99a;
+}
+
+.edit-btn:hover {
+  background: #ffe8a8;
+  color: #5d4500;
+}
+
+.delete-btn {
+  background: #fff0f0;
+  color: #b42332;
+  border: 1px solid #f2c4ca;
+}
+
+.delete-btn:hover {
+  background: #ffe0e3;
+  color: #8f1522;
+}
+
+.loan-edit-form {
+  margin-top: 15px;
+  padding: 17px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fffdf5, #f8fbf8);
+  border: 1px solid #eadfb7;
+}
+
+.loan-edit-form h4 {
+  margin: 0 0 12px;
+}
+
+.loan-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 15px;
+}
+
+@media (max-width: 700px) {
+  .loan-edit-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* =========================================================
    RESPONSIVE
    ========================================================= */
@@ -1311,6 +1430,15 @@ tbody tr:hover {
 }
 
 @media (max-width: 650px) {
+  .install-app-card {
+    display: block;
+  }
+
+  .install-app-button {
+    width: 100%;
+    margin-top: 14px;
+  }
+
   .app {
     display: block;
   }

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Loan Management</string>
-    <string name="title_activity_main">Loan Management</string>
+    <string name="app_name">Business Loan</string>
+    <string name="title_activity_main">Business Loan</string>
     <string name="package_name">com.loan.management</string>
     <string name="custom_url_scheme">com.loan.management</string>
 </resources>

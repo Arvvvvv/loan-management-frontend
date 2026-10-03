@@ -35,11 +35,11 @@ function downloadLoanReceipt(loan) {
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text('BORROWER INFORMATION', left, y);
+  doc.text('CUSTOMER INFORMATION', left, y);
   y += 7;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
-  doc.text(`Borrower: ${borrower}`, left, y);
+  doc.text(`Customer: ${borrower}`, left, y);
   y += 8;
   line();
 
@@ -191,6 +191,18 @@ function Dashboard({ stats, loans }) {
       <Stat title="Total Payable" value={peso(stats.totalPayable)} />
       <Stat title="Remaining Balance" value={peso(stats.remaining)} />
     </div>
+    <div className="install-app-card">
+      <div className="install-app-info">
+        <div className="install-app-icon">📱</div>
+        <div>
+          <h3>Install Business Loan App</h3>
+          <p className="muted small">Use the Android app for quick access to your loan management system.</p>
+        </div>
+      </div>
+      <a className="install-app-button" href="/Business-Loan.apk" download="Business-Loan.apk" aria-label="Download Business Loan Android APK">
+        📲 Download APK
+      </a>
+    </div>
     <div className="panel">
       <div className="panel-title"><div><h3>Recent Loans</h3><p className="muted small">Loans added from the Loans page.</p></div></div>
       {loans.length === 0 ? <Empty text="No loans yet. Go to Loans to add your first borrower." /> : <table><thead><tr><th>Customer</th><th>Loan</th><th>Interest</th><th>Total</th><th>Months</th><th>Status</th></tr></thead><tbody>
@@ -210,6 +222,8 @@ function Loans({ loans, reload }) {
   const [showForm, setShowForm] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', principal: '', termCount: '', interestValue: '' });
 
   const total = useMemo(() => Number(form.principal || 0) + Number(form.interestValue || 0), [form.principal, form.interestValue]);
   const payments = Math.max(1, Number(form.termCount || 1) * 2);
@@ -236,6 +250,55 @@ function Loans({ loans, reload }) {
       alert(e.response?.data?.message || 'Could not create loan.');
     } finally {
       setSaving(false);
+    }
+  };
+
+
+  const startEdit = loan => {
+    setEditingId(loan._id);
+    setEditForm({
+      name: loan.customer?.name || '',
+      principal: loan.principal,
+      termCount: loan.termCount,
+      interestValue: loan.interestValue
+    });
+    setExpanded(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ name: '', principal: '', termCount: '', interestValue: '' });
+  };
+
+  const update = async e => {
+    e.preventDefault();
+    try {
+      await api.put(`/loans/${editingId}`, {
+        borrowerName: editForm.name,
+        principal: Number(editForm.principal),
+        interestValue: Number(editForm.interestValue),
+        termCount: Number(editForm.termCount)
+      });
+      cancelEdit();
+      await reload();
+    } catch (e) {
+      alert(e.response?.data?.message || 'Could not update loan.');
+    }
+  };
+
+  const remove = async loan => {
+    const customerName = loan.customer?.name || 'this customer';
+    const confirmed = window.confirm(
+      `Delete the loan for ${customerName}?\n\nThis cannot be undone. Loans with recorded payments cannot be deleted.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/loans/${loan._id}`);
+      if (expanded === loan._id) setExpanded(null);
+      await reload();
+    } catch (e) {
+      alert(e.response?.data?.message || 'Could not delete loan.');
     }
   };
 
@@ -290,7 +353,25 @@ function Loans({ loans, reload }) {
             <div><span>Remaining</span><strong>{peso(remaining)}</strong></div>
             <div><span>Next Payment</span><strong>{next ? `${peso(next.amount - next.paidAmount)} · ${dateText(next.dueDate)}` : 'None'}</strong></div>
           </div>
-          <div className="loan-card-actions"><button onClick={() => setExpanded(expanded === loan._id ? null : loan._id)}>{expanded === loan._id ? 'Hide Schedule' : 'View Schedule'}</button><button className="primary" onClick={() => downloadLoanReceipt(loan)}>Download Receipt</button></div>
+          <div className="loan-card-actions">
+            <button onClick={() => setExpanded(expanded === loan._id ? null : loan._id)}>{expanded === loan._id ? 'Hide Schedule' : 'View Schedule'}</button>
+            <button className="primary" onClick={() => downloadLoanReceipt(loan)}>Download Receipt</button>
+            <button className="edit-btn" onClick={() => startEdit(loan)}>Edit</button>
+            <button className="delete-btn" onClick={() => remove(loan)}>Delete</button>
+          </div>
+          {editingId === loan._id && <form className="loan-edit-form" onSubmit={update}>
+            <h4>Edit Loan</h4>
+            <div className="loan-edit-grid">
+              <label>Customer Name<input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} required /></label>
+              <label>Amount to Loan (₱)<input type="number" min="1" step="0.01" value={editForm.principal} onChange={e => setEditForm({ ...editForm, principal: e.target.value })} required /></label>
+              <label>Months to Pay<input type="number" min="1" step="1" value={editForm.termCount} onChange={e => setEditForm({ ...editForm, termCount: e.target.value })} required /></label>
+              <label>Interest (₱)<input type="number" min="0" step="0.01" value={editForm.interestValue} onChange={e => setEditForm({ ...editForm, interestValue: e.target.value })} required /></label>
+            </div>
+            <div className="actions">
+              <button className="primary" type="submit">Save Changes</button>
+              <button type="button" onClick={cancelEdit}>Cancel</button>
+            </div>
+          </form>}
           {expanded === loan._id && <div className="schedule"><h4>Payment Schedule</h4>{loan.payments.map(p => <div className="payment-row" key={p._id}><span><b>Payment #{p.installment}</b><small>{dateText(p.dueDate)}</small></span><span>{peso(p.amount)}<small>Paid: {peso(p.paidAmount)}</small></span><span className={'badge ' + p.status.toLowerCase()}>{p.status}</span>{p.status !== 'Paid' && <button onClick={() => pay(loan, p)}>Record Payment</button>}</div>)}</div>}
         </div>;
       })}</div>}
