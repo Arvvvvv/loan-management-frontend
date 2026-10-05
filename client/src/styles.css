@@ -2574,6 +2574,14 @@ tbody tr:hover {
   font-size: 12px;
 }
 
+.schedule-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .loan-card .loan-card-top .muted {
   display: block;
   margin-top: 3px;
@@ -2583,6 +2591,11 @@ tbody tr:hover {
   .schedule-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .schedule-heading-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 
@@ -2881,4 +2894,254 @@ tbody tr:hover {
   .pocket-deposit-card { padding: 18px 14px 20px; }
   .pocket-deposit-scene { height: 190px; }
   .pocket-money-image { width: 170px; height: 170px; }
+}
+
+/* =========================================================
+   APK-ONLY MOBILE NAVIGATION
+   The native Capacitor app uses a bottom navigation bar.
+   The normal web/Vercel layout is left unchanged.
+   ========================================================= */
+@media (max-width: 900px) {
+  .app.native-app {
+    display: block;
+    min-height: 100vh;
+    padding-bottom: 82px;
+  }
+
+  .app.native-app aside {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    min-height: 70px;
+    height: 76px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+    gap: 4px;
+    z-index: 1000;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -8px 28px rgba(0,0,0,.16);
+  }
+
+  .app.native-app aside::after,
+  .app.native-app aside .brand,
+  .app.native-app .sidebar-bottom {
+    display: none;
+  }
+
+  .app.native-app .nav {
+    flex: 1 1 0;
+    width: auto;
+    max-width: 180px;
+    margin: 0;
+    padding: 7px 5px 8px;
+    text-align: center;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: #c8ddd1;
+    transform: none !important;
+    white-space: nowrap;
+  }
+
+  .app.native-app .nav.active {
+    color: #fff;
+    background: linear-gradient(135deg, #168b49, #0f6e3a);
+    box-shadow: 0 5px 16px rgba(0,0,0,.18);
+  }
+
+  .app.native-app main {
+    min-height: calc(100vh - 76px);
+    padding-bottom: 24px;
+  }
+}
+
+/* Payment schedule edit controls */
+.payment-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.payment-row-actions button {
+  white-space: nowrap;
+}
+
+.payment-edit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(4, 31, 19, .48);
+  backdrop-filter: blur(4px);
+}
+
+.payment-edit-card {
+  width: min(470px, 100%);
+  padding: 22px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #d9e8df;
+  box-shadow: 0 24px 70px rgba(0,0,0,.22);
+}
+
+.payment-edit-card .modal-header {
+  margin-bottom: 16px;
+}
+
+.payment-edit-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: #f0f8f3;
+  border: 1px solid #d8eadf;
+}
+
+@media (max-width: 800px) {
+  .payment-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .modal-payment-row .payment-row-actions {
+    display: flex;
+    width: 100%;
+  }
+
+  .modal-payment-row .payment-row-actions button {
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .app.native-app aside {
+    height: 72px;
+  }
+
+  .app.native-app main {
+    min-height: calc(100vh - 72px);
+  }
+
+  .app.native-app .nav {
+    font-size: 11px;
+  }
+
+  .payment-edit-overlay {
+    padding: 10px;
+    align-items: end;
+  }
+
+  .payment-edit-card {
+    border-radius: 20px 20px 12px 12px;
+    padding: 18px;
+  }
+}
+
+/* Record payment form + login transition */
+.payment-form-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(4, 31, 19, .58);
+  backdrop-filter: blur(5px);
+  animation: modalFade .18s ease;
+}
+
+.payment-form-card {
+  width: min(500px, 100%);
+  padding: 24px;
+  border-radius: 22px;
+  background: #fff;
+  border: 1px solid #d9e8df;
+  box-shadow: 0 28px 80px rgba(0,0,0,.28);
+  animation: paymentFormUp .24s ease;
+}
+
+.payment-form-card .modal-header { margin-bottom: 18px; }
+.payment-form-card h3 { margin: 2px 0 4px; }
+.payment-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.payment-form-grid label { display: grid; gap: 7px; font-weight: 800; color: #244034; font-size: 13px; }
+.payment-form-grid input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 14px;
+  border: 1px solid #cbded3;
+  border-radius: 12px;
+  background: #f8fcfa;
+  color: #163626;
+  font: inherit;
+  font-weight: 700;
+}
+.payment-form-grid input:focus { outline: none; border-color: #15924d; box-shadow: 0 0 0 3px rgba(21,146,77,.12); }
+.payment-form-note { margin: 14px 0 0; padding: 11px 12px; border-radius: 12px; background: #f1f8f4; border: 1px solid #d9ebe0; }
+.payment-form-card .actions { margin-top: 18px; justify-content: flex-end; }
+
+@keyframes paymentFormUp {
+  from { opacity: 0; transform: translateY(18px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.login-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: rgba(3, 38, 23, .92);
+  color: #fff;
+  animation: loginOverlayIn .2s ease forwards;
+}
+
+.login-transition strong { font-size: 25px; font-weight: 900; letter-spacing: -.3px; }
+.login-transition small { color: rgba(255,255,255,.76); font-size: 13px; }
+.login-wallet-scene { position: relative; width: 190px; height: 150px; display: grid; place-items: center; }
+.login-wallet { font-size: 82px; filter: drop-shadow(0 15px 18px rgba(0,0,0,.24)); animation: walletOpen 1.05s cubic-bezier(.2,.8,.2,1) forwards; }
+.login-money-bill {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  width: 62px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg,#f5c84b,#ffd96c);
+  color: #145a31;
+  font-weight: 1000;
+  font-size: 25px;
+  box-shadow: 0 7px 15px rgba(0,0,0,.2);
+  transform: translate(-50%, 20px) rotate(-8deg);
+  animation: moneyIntoWallet 1.05s cubic-bezier(.22,.8,.25,1) forwards;
+  z-index: 2;
+}
+.login-coin { position: absolute; font-weight: 1000; color: #ffd45a; opacity: 0; animation: coinPop .85s ease forwards; }
+.login-coin.coin-1 { left: 25px; top: 38px; animation-delay: .18s; }
+.login-coin.coin-2 { right: 25px; top: 52px; animation-delay: .3s; }
+.login-coin.coin-3 { left: 48px; top: 8px; animation-delay: .42s; }
+@keyframes loginOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes walletOpen { 0% { transform: translateY(25px) scale(.7) rotate(-8deg); opacity: 0; } 55% { transform: translateY(0) scale(1.08) rotate(2deg); opacity: 1; } 100% { transform: translateY(0) scale(1) rotate(0); opacity: 1; } }
+@keyframes moneyIntoWallet { 0% { opacity: 0; transform: translate(-50%, -8px) rotate(-20deg) scale(.8); } 45% { opacity: 1; transform: translate(-50%, 8px) rotate(10deg) scale(1); } 100% { opacity: 1; transform: translate(-50%, 54px) rotate(0) scale(.78); } }
+@keyframes coinPop { 0% { opacity: 0; transform: translateY(10px) scale(.4); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-28px) scale(1.15); } }
+
+@media (max-width: 600px) {
+  .payment-form-grid { grid-template-columns: 1fr; }
+  .payment-form-card { padding: 19px; border-radius: 18px; }
+  .login-wallet-scene { transform: scale(.88); }
 }

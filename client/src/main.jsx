@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import api, { isNetworkError } from './api';
+import { Capacitor } from '@capacitor/core';
 import { jsPDF } from 'jspdf';
 import './styles.css';
 
@@ -290,7 +291,21 @@ function downloadLoanReceipt(loan) {
   doc.setTextColor(100, 110, 105);
   doc.text('This receipt records the loan terms and payment schedule entered in the Business Loan system.', left, y);
 
-  doc.save(`${receiptNo}-${borrower.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'borrower'}.pdf`);
+  const safeBorrower = borrower.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'borrower';
+  const fileName = `${receiptNo}-${safeBorrower}.pdf`;
+  // Use a Blob + temporary download link so the receipt is downloaded directly
+  // instead of being handed to the system PDF viewer (which can fail when an
+  // older copy of the same receipt is still open in Acrobat).
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 function MoneyRain({ variant = 'app' }) {
@@ -307,6 +322,25 @@ function MoneyRain({ variant = 'app' }) {
   </div>;
 }
 
+function PaymentFormModal({ loan, payment, amount, date, onAmountChange, onDateChange, onCancel, onSubmit, busy }) {
+  if (!loan || !payment) return null;
+  const remaining = Math.max(0, Number(payment.amount || 0) - Number(payment.paidAmount || 0));
+  return <div className="payment-form-overlay" role="dialog" aria-modal="true" aria-label="Record payment">
+    <form className="payment-form-card" onSubmit={onSubmit}>
+      <div className="modal-header">
+        <div><span className="modal-kicker">Payment entry</span><h3>Record Payment #{payment.installment}</h3><p className="muted small">{loan.customer?.name || 'Borrower'} · Remaining {peso(remaining)}</p></div>
+        <button type="button" className="modal-close" onClick={onCancel} aria-label="Close">×</button>
+      </div>
+      <div className="payment-form-grid">
+        <label>Payment Amount (₱)<input type="number" min="0.01" max={remaining} step="0.01" value={amount} onChange={e => onAmountChange(e.target.value)} placeholder={remaining.toFixed(2)} required autoFocus /></label>
+        <label>Date Paid<input type="date" value={date} onChange={e => onDateChange(e.target.value)} required /></label>
+      </div>
+      <p className="muted small payment-form-note">You can change the payment date before saving. Use the actual date the borrower paid, even if you are recording it later.</p>
+      <div className="actions"><button type="button" onClick={onCancel} disabled={busy}>Cancel</button><button className="primary" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save Payment'}</button></div>
+    </form>
+  </div>;
+}
+
 function Auth({ onLogin }) {
   const [register, setRegister] = useState(false);
   const [form, setForm] = useState({ username: '', password: '', confirmPassword: '' });
@@ -314,6 +348,7 @@ function Auth({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   const submit = async e => {
     e.preventDefault();
@@ -323,7 +358,12 @@ function Auth({ onLogin }) {
       const r = await api.post(`/auth/${register ? 'register' : 'login'}`, form);
       localStorage.setItem('loan_token', r.data.token);
       localStorage.setItem('loan_user', JSON.stringify(r.data.user));
-      onLogin(r.data.user);
+      if (!register) {
+        setLoginSuccess(true);
+        window.setTimeout(() => onLogin(r.data.user), 1250);
+      } else {
+        onLogin(r.data.user);
+      }
     } catch (e) {
       if (e.response?.data?.message) setError(e.response.data.message);
       else if (isNetworkError(e)) setError('The server is taking too long to respond. Please check your internet connection or try again in a moment.');
@@ -333,8 +373,15 @@ function Auth({ onLogin }) {
     }
   };
 
-  return <div className="auth-page">
+  return <div className={`auth-page ${loginSuccess ? 'login-success-active' : ''}`}>
     <MoneyRain variant="auth" />
+    {loginSuccess && <div className="login-transition" aria-live="polite">
+      <div className="login-wallet-scene">
+        <div className="login-money-bill">₱</div><div className="login-wallet">💼</div>
+        <span className="login-coin coin-1">₱</span><span className="login-coin coin-2">₱</span><span className="login-coin coin-3">₱</span>
+      </div>
+      <strong>Welcome back!</strong><small>Opening your Business Loan account…</small>
+    </div>}
     <div className="auth-card">
       <div className="auth-intro">
         <div className="logo"><img src="/loan-icon.png" alt="Business Loan" /></div>
@@ -422,7 +469,9 @@ function App() {
 
   if (!user) return <Auth onLogin={u => setUser(u)} />;
 
-  return <div className={`app page-${page}`}>
+  const nativeApp = Capacitor.isNativePlatform();
+
+  return <div className={`app page-${page} ${nativeApp ? 'native-app' : ''}`}>
     <aside>
       <div className="brand"><img src="/loan-icon.png" alt="Business Loan" /><span>Business Loan</span></div>
       <button className={page === 'dashboard' ? 'nav active' : 'nav'} onClick={() => setPage('dashboard')}>📊 Dashboard</button>
@@ -444,6 +493,62 @@ function App() {
   </div>;
 }
 
+function getPaymentScheduleOverrides() {
+  try { return JSON.parse(localStorage.getItem('loan_payment_schedule_overrides') || '{}'); }
+  catch { return {}; }
+}
+
+function setPaymentScheduleOverride(loanId, paymentId, values) {
+  const all = getPaymentScheduleOverrides();
+  all[`${loanId}:${paymentId}`] = { ...(all[`${loanId}:${paymentId}`] || {}), ...values };
+  localStorage.setItem('loan_payment_schedule_overrides', JSON.stringify(all));
+}
+
+function getLoanStartDateOverrides() {
+  try { return JSON.parse(localStorage.getItem('loan_start_date_overrides') || '{}'); }
+  catch { return {}; }
+}
+
+function setLoanStartDateOverride(loanId, startDate) {
+  const all = getLoanStartDateOverrides();
+  all[loanId] = startDate;
+  localStorage.setItem('loan_start_date_overrides', JSON.stringify(all));
+}
+
+function clearLoanStartDateOverride(loanId) {
+  const all = getLoanStartDateOverrides();
+  delete all[loanId];
+  localStorage.setItem('loan_start_date_overrides', JSON.stringify(all));
+}
+
+function effectiveLoanStartDate(loan) {
+  return getLoanStartDateOverrides()[loan._id] || loan.startDate || loan.createdAt;
+}
+
+function addCalendarDays(dateInput, days) {
+  if (!dateInput) return dateInput;
+  const [year, month, day] = String(dateInput).slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return dateInput;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + Number(days || 0));
+  return date.toISOString().slice(0, 10);
+}
+
+function paymentWithLocalOverride(loan, payment) {
+  const override = getPaymentScheduleOverrides()[`${loan._id}:${payment._id}`] || {};
+  let dueDate = override.dueDate || payment.dueDate;
+  const localStartDate = getLoanStartDateOverrides()[loan._id];
+  if (localStartDate && payment.status !== 'Paid' && !override.dueDate) {
+    dueDate = addCalendarDays(localStartDate, Number(payment.installment || 0) * 15);
+  }
+  return { ...payment, ...override, dueDate };
+}
+
+function paymentDisplayDate(loan, payment) {
+  const effective = paymentWithLocalOverride(loan, payment);
+  return payment.paidAt || effective.dueDate;
+}
+
 function Dashboard({ stats, loans, reload }) {
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -451,6 +556,11 @@ function Dashboard({ stats, loans, reload }) {
   const [busy, setBusy] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [pocketName, setPocketName] = useState('');
+  const [editingStartDate, setEditingStartDate] = useState(null);
+  const [startDateValue, setStartDateValue] = useState('');
+  const [paymentTarget, setPaymentTarget] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(localDateInput());
 
   const openLoan = loan => {
     setEditingId(null);
@@ -519,32 +629,71 @@ function Dashboard({ stats, loans, reload }) {
     }
   };
 
-  const recordPayment = async (loan, payment) => {
+  const recordPayment = (loan, payment) => {
     const remaining = Number((payment.amount - payment.paidAmount).toFixed(2));
-    const amount = window.prompt(
-      `Customer: ${loan.customer?.name || 'Borrower'}\nPayment #${payment.installment}\nAmount due: ${peso(remaining)}\n\nEnter payment amount:`,
-      remaining.toFixed(2)
-    );
-    if (amount === null) return;
+    setPaymentTarget({ loan, payment });
+    setPaymentAmount(remaining.toFixed(2));
+    setPaymentDate(localDateInput());
+  };
 
-    const received = Number(amount);
-    if (!received || received <= 0) {
-      alert('Please enter a valid payment amount.');
+  const submitPayment = async e => {
+    e.preventDefault();
+    if (!paymentTarget) return;
+    const { loan, payment } = paymentTarget;
+    const remaining = Number((payment.amount - payment.paidAmount).toFixed(2));
+    const received = Number(paymentAmount);
+    if (!received || received <= 0 || received > remaining) {
+      alert(`Please enter an amount from ₱0.01 to ₱${remaining.toFixed(2)}.`);
       return;
     }
-
+    if (!paymentDate) { alert('Please select the date the payment was made.'); return; }
     setBusy(true);
     try {
-      await api.post(`/loans/${loan._id}/payments/${payment._id}`, { amount: received });
+      await api.post(`/loans/${loan._id}/payments/${payment._id}`, { amount: received, paidAt: paymentDate });
       const fresh = await reload();
       const updated = fresh?.find(l => l._id === loan._id);
       if (updated) setSelectedLoan(updated);
+      setPaymentTarget(null);
     } catch (e) {
       alert(e.response?.data?.message || 'Could not record payment.');
+    } finally { setBusy(false); }
+  };
+
+  const openStartDateEditor = loan => {
+    setEditingStartDate(loan);
+    setStartDateValue(localDateInput(effectiveLoanStartDate(loan)));
+  };
+
+  const saveStartDate = async e => {
+    e.preventDefault();
+    if (!editingStartDate || !startDateValue) return;
+    setBusy(true);
+    try {
+      await api.put(`/loans/${editingStartDate._id}`, {
+        borrowerName: editingStartDate.customer?.name || 'Borrower',
+        principal: Number(editingStartDate.principal),
+        interestValue: Number(editingStartDate.interestValue),
+        termCount: Number(editingStartDate.termCount),
+        startDate: startDateValue
+      });
+      clearLoanStartDateOverride(editingStartDate._id);
+      const fresh = await reload();
+      const updated = fresh?.find(l => l._id === editingStartDate._id);
+      if (updated) setSelectedLoan(updated);
+    } catch (e) {
+      // Loans with recorded payments cannot change the server schedule. Keep the requested start date as a device-local schedule date instead.
+      setLoanStartDateOverride(editingStartDate._id, startDateValue);
+      const fresh = await reload();
+      const updated = fresh?.find(l => l._id === editingStartDate._id);
+      if (updated) setSelectedLoan(updated);
+      alert('Start date updated for this device. The existing recorded payments were kept unchanged.');
     } finally {
+      setEditingStartDate(null);
+      setStartDateValue('');
       setBusy(false);
     }
   };
+
 
   return <section>
     <div className="cards">
@@ -603,7 +752,7 @@ function Dashboard({ stats, loans, reload }) {
                 <td>
                   {next ? <div className="next-payment-cell">
                     <strong>{peso(nextRemaining)}</strong>
-                    <small>{dateText(next.dueDate)}</small>
+                    <small>{dateText(paymentWithLocalOverride(l, next).dueDate)}</small>
                   </div> : <span className="muted">Fully paid</span>}
                 </td>
                 <td><span className={'badge ' + String(l.status || '').toLowerCase()}>{l.status}</span></td>
@@ -654,38 +803,62 @@ function Dashboard({ stats, loans, reload }) {
               <div><span>Total Payable</span><strong>{peso(selectedLoan.totalPayable)}</strong></div>
               <div><span>Total Paid</span><strong>{peso(collected)}</strong></div>
               <div><span>Remaining</span><strong className="remaining-highlight">{peso(remaining)}</strong></div>
-              <div><span>Next Payment</span><strong>{next ? peso(nextRemaining) : 'None'}</strong><small>{next ? `Due ${dateText(next.dueDate)}` : 'Loan completed'}</small></div>
+              <div><span>Next Payment</span><strong>{next ? peso(nextRemaining) : 'None'}</strong><small>{next ? `Due ${dateText(paymentWithLocalOverride(selectedLoan, next).dueDate)}` : 'Loan completed'}</small></div>
             </div>;
           })()}
 
           <div className="modal-actions">
             <button className="edit-btn" onClick={() => startEdit(selectedLoan)}>✏️ Edit Loan</button>
             <button className="delete-btn" onClick={() => remove(selectedLoan)} disabled={busy}>🗑 Delete Loan</button>
-            <button className="primary" onClick={() => {
-              const next = selectedLoan.payments?.find(p => p.status !== 'Paid');
-              if (next) recordPayment(selectedLoan, next);
-            }} disabled={busy || !selectedLoan.payments?.some(p => p.status !== 'Paid')}>
-              💵 Record Next Payment
-            </button>
           </div>
 
           <div className="modal-schedule">
             <div className="modal-section-heading">
-              <div><h4>Payment Schedule</h4><span className="muted small">Every 15 days</span></div>
-              {selectedLoan.status && <span className={'badge ' + selectedLoan.status.toLowerCase()}>{selectedLoan.status}</span>}
+              <div><h4>Payment Schedule</h4><span className="muted small">Loan started {dateText(effectiveLoanStartDate(selectedLoan))} · Every 15 days</span></div>
+              <div className="schedule-heading-actions">
+                <button className="edit-btn" onClick={() => openStartDateEditor(selectedLoan)} disabled={busy}>✏️ Edit Start Date</button>
+                {selectedLoan.status && <span className={'badge ' + selectedLoan.status.toLowerCase()}>{selectedLoan.status}</span>}
+              </div>
             </div>
             <div className="modal-payment-list">
               {(selectedLoan.payments || []).map(p => {
-                const due = Math.max(0, Number(p.amount || 0) - Number(p.paidAmount || 0));
+                const effective = paymentWithLocalOverride(selectedLoan, p);
+                const due = Math.max(0, Number(effective.amount || 0) - Number(effective.paidAmount || 0));
+                const isNext = selectedLoan.payments?.find(x => x.status !== 'Paid')?._id === p._id;
                 return <div className={'modal-payment-row ' + String(p.status || '').toLowerCase()} key={p._id}>
-                  <div><b>Payment #{p.installment}</b><small>Due {dateText(p.dueDate)}</small></div>
-                  <div><strong>{peso(due)}</strong><small>of {peso(p.amount)}</small></div>
+                  <div><b>Payment #{p.installment}</b><small>{p.paidAt ? 'Paid ' : (p.status === 'Paid' ? 'Paid ' : 'Due ')}{dateText(paymentDisplayDate(selectedLoan, p))}</small></div>
+                  <div><strong>{peso(due)}</strong><small>of {peso(effective.amount)}</small></div>
                   <span className={'badge ' + String(p.status || '').toLowerCase()}>{p.status}</span>
-                  {p.status !== 'Paid' && <button className="pay-btn" onClick={() => recordPayment(selectedLoan, p)} disabled={busy}>Record Payment</button>}
+                  <div className="payment-row-actions">
+                    {isNext && p.status !== 'Paid' && <button className="pay-btn" onClick={() => recordPayment(selectedLoan, p)} disabled={busy}>Record Payment</button>}
+                  </div>
                 </div>;
               })}
             </div>
           </div>
+          {editingStartDate && <div className="payment-edit-overlay" role="dialog" aria-modal="true" aria-label="Edit loan start date">
+            <form className="payment-edit-card" onSubmit={saveStartDate}>
+              <div className="modal-header">
+                <div><span className="modal-kicker">Loan schedule</span><h3>Edit Loan Start Date</h3><p className="muted small">Choose the correct date the borrower actually received the loan.</p></div>
+                <button type="button" className="modal-close" onClick={() => setEditingStartDate(null)} aria-label="Close">×</button>
+              </div>
+              <label className="calendar-field">📅 Loan Start Date<input type="date" value={startDateValue} onChange={e => setStartDateValue(e.target.value)} required /></label>
+              <p className="muted small payment-edit-note">Unpaid payment dates will follow this start date every 15 days. When a payment is fully paid, its displayed date is automatically set to the actual day it was paid.</p>
+              <div className="actions"><button type="button" onClick={() => setEditingStartDate(null)}>Cancel</button><button className="primary" type="submit">Save Start Date</button></div>
+            </form>
+          </div>}
+          {paymentTarget && <PaymentFormModal
+            loan={paymentTarget.loan}
+            payment={paymentTarget.payment}
+            amount={paymentAmount}
+            date={paymentDate}
+            onAmountChange={setPaymentAmount}
+            onDateChange={setPaymentDate}
+            onCancel={() => setPaymentTarget(null)}
+            onSubmit={submitPayment}
+            busy={busy}
+          />}
+
         </>}
       </div>
     </div>}
@@ -840,6 +1013,11 @@ function Loans({ loans, reload }) {
   const [statusFilter, setStatusFilter] = useState('All');
   const [deletingId, setDeletingId] = useState(null);
   const [pocketName, setPocketName] = useState('');
+  const [editingStartDate, setEditingStartDate] = useState(null);
+  const [startDateValue, setStartDateValue] = useState('');
+  const [paymentTarget, setPaymentTarget] = useState(null);
+  const [paymentEntryAmount, setPaymentEntryAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(localDateInput());
 
   const total = useMemo(() => Number(form.principal || 0) + Number(form.interestValue || 0), [form.principal, form.interestValue]);
   const payments = Math.max(1, Number(form.termCount || 1) * 2);
@@ -933,17 +1111,62 @@ function Loans({ loans, reload }) {
     }
   };
 
-  const pay = async (loan, payment) => {
+  const pay = (loan, payment) => {
     const remaining = Number((payment.amount - payment.paidAmount).toFixed(2));
-    const amount = prompt(`Payment due: ${peso(remaining)}\nEnter payment amount:`);
-    if (amount === null) return;
+    setPaymentTarget({ loan, payment });
+    setPaymentEntryAmount(remaining.toFixed(2));
+    setPaymentDate(localDateInput());
+  };
+
+  const submitPayment = async e => {
+    e.preventDefault();
+    if (!paymentTarget) return;
+    const { loan, payment } = paymentTarget;
+    const remaining = Number((payment.amount - payment.paidAmount).toFixed(2));
+    const received = Number(paymentEntryAmount);
+    if (!received || received <= 0 || received > remaining) {
+      alert(`Please enter an amount from ₱0.01 to ₱${remaining.toFixed(2)}.`);
+      return;
+    }
+    if (!paymentDate) { alert('Please select the date the payment was made.'); return; }
+    setSaving(true);
     try {
-      await api.post(`/loans/${loan._id}/payments/${payment._id}`, { amount: Number(amount) });
+      await api.post(`/loans/${loan._id}/payments/${payment._id}`, { amount: received, paidAt: paymentDate });
       await reload();
+      setPaymentTarget(null);
     } catch (e) {
       alert(e.response?.data?.message || 'Could not record payment.');
+    } finally { setSaving(false); }
+  };
+
+  const openStartDateEditor = loan => {
+    setEditingStartDate(loan);
+    setStartDateValue(localDateInput(effectiveLoanStartDate(loan)));
+  };
+
+  const saveStartDate = async e => {
+    e.preventDefault();
+    if (!editingStartDate || !startDateValue) return;
+    try {
+      await api.put(`/loans/${editingStartDate._id}`, {
+        borrowerName: editingStartDate.customer?.name || 'Borrower',
+        principal: Number(editingStartDate.principal),
+        interestValue: Number(editingStartDate.interestValue),
+        termCount: Number(editingStartDate.termCount),
+        startDate: startDateValue
+      });
+      clearLoanStartDateOverride(editingStartDate._id);
+      await reload();
+    } catch (e) {
+      setLoanStartDateOverride(editingStartDate._id, startDateValue);
+      await reload();
+      alert('Start date updated for this device. The existing recorded payments were kept unchanged.');
+    } finally {
+      setEditingStartDate(null);
+      setStartDateValue('');
     }
   };
+
 
   return <section>
     {pocketName && <PocketDepositAnimation name={pocketName} onDone={() => setPocketName('')} />}
@@ -975,7 +1198,7 @@ function Loans({ loans, reload }) {
         const next = loan.payments?.find(p => p.status !== 'Paid');
         return <div className={`loan-card ${deletingId === loan._id ? 'loan-card-deleting' : ''}`} key={loan._id}>
           <div className="loan-card-top">
-            <div><h3>{loan.customer?.name || 'Borrower'}</h3><span className="muted">Loan date: {dateText(loan.startDate || loan.createdAt)} · Recorded {dateText(loan.createdAt)}</span></div>
+            <div><h3>{loan.customer?.name || 'Borrower'}</h3><span className="muted">Loan date: {dateText(effectiveLoanStartDate(loan))} · Recorded {dateText(loan.createdAt)}</span></div>
             <span className={'badge ' + loan.status.toLowerCase()}>{loan.status}</span>
           </div>
           <div className="loan-details">
@@ -984,8 +1207,8 @@ function Loans({ loans, reload }) {
             <div><span>Total</span><strong>{peso(loan.totalPayable)}</strong></div>
             <div><span>Term</span><strong>{loan.termCount} month{loan.termCount === 1 ? '' : 's'}</strong></div>
             <div><span>Remaining</span><strong>{peso(remaining)}</strong></div>
-            <div><span>Loan Date</span><strong>{dateText(loan.startDate || loan.createdAt)}</strong></div>
-            <div><span>Next Payment</span><strong>{next ? `${peso(next.amount - next.paidAmount)} · ${dateText(next.dueDate)}` : 'None'}</strong></div>
+            <div><span>Loan Date</span><strong>{dateText(effectiveLoanStartDate(loan))}</strong></div>
+            <div><span>Next Payment</span><strong>{next ? `${peso(next.amount - next.paidAmount)} · ${dateText(paymentWithLocalOverride(loan, next).dueDate)}` : 'None'}</strong></div>
           </div>
           <div className="loan-card-actions">
             <button onClick={() => setExpanded(expanded === loan._id ? null : loan._id)}>{expanded === loan._id ? 'Hide Schedule' : 'View Schedule'}</button>
@@ -1007,10 +1230,29 @@ function Loans({ loans, reload }) {
               <button type="button" onClick={cancelEdit}>Cancel</button>
             </div>
           </form>}
-          {expanded === loan._id && <div className="schedule"><div className="schedule-heading"><div><h4>Payment Schedule</h4><small>Loan started {dateText(loan.startDate || loan.createdAt)} · Every 15 days</small></div><span className="calendar-chip">📅 {dateText(loan.startDate || loan.createdAt)}</span></div>{loan.payments.map(p => <div className="payment-row" key={p._id}><span><b>Payment #{p.installment}</b><small>{dateText(p.dueDate)}</small></span><span>{peso(p.amount)}<small>Paid: {peso(p.paidAmount)}</small></span><span className={'badge ' + p.status.toLowerCase()}>{p.status}</span>{p.status !== 'Paid' && <button onClick={() => pay(loan, p)}>Record Payment</button>}</div>)}</div>}
+          {expanded === loan._id && <div className="schedule"><div className="schedule-heading"><div><h4>Payment Schedule</h4><small>Loan started {dateText(effectiveLoanStartDate(loan))} · Every 15 days</small></div><div className="schedule-heading-actions"><button className="edit-btn" onClick={() => openStartDateEditor(loan)}>✏️ Edit Start Date</button><span className="calendar-chip">📅 {dateText(effectiveLoanStartDate(loan))}</span></div></div>{loan.payments.map(p => { const effective = paymentWithLocalOverride(loan, p); const isNext = loan.payments.find(x => x.status !== 'Paid')?._id === p._id; return <div className="payment-row" key={p._id}><span><b>Payment #{p.installment}</b><small>{p.paidAt ? 'Paid ' : (p.status === 'Paid' ? 'Paid ' : 'Due ')}{dateText(paymentDisplayDate(loan, p))}</small></span><span>{peso(effective.amount)}<small>Paid: {peso(effective.paidAmount)}</small></span><span className={'badge ' + p.status.toLowerCase()}>{p.status}</span><div className="payment-row-actions">{isNext && p.status !== 'Paid' && <button onClick={() => pay(loan, p)}>Record Payment</button>}</div></div>; })}</div>}
         </div>;
       })}</div>}
     </div>
+    {paymentTarget && <PaymentFormModal
+      loan={paymentTarget.loan}
+      payment={paymentTarget.payment}
+      amount={paymentEntryAmount}
+      date={paymentDate}
+      onAmountChange={setPaymentEntryAmount}
+      onDateChange={setPaymentDate}
+      onCancel={() => setPaymentTarget(null)}
+      onSubmit={submitPayment}
+      busy={saving}
+    />}
+    {editingStartDate && <div className="payment-edit-overlay" role="dialog" aria-modal="true" aria-label="Edit loan start date">
+      <form className="payment-edit-card" onSubmit={saveStartDate}>
+        <div className="modal-header"><div><span className="modal-kicker">Loan schedule</span><h3>Edit Loan Start Date</h3><p className="muted small">Choose the correct date the borrower actually received the loan.</p></div><button type="button" className="modal-close" onClick={() => setEditingStartDate(null)} aria-label="Close">×</button></div>
+        <label className="calendar-field">📅 Loan Start Date<input type="date" value={startDateValue} onChange={e => setStartDateValue(e.target.value)} required /></label>
+        <p className="muted small payment-edit-note">Unpaid payment dates will follow this start date every 15 days. When a payment is fully paid, its displayed date is automatically set to the actual day it was paid.</p>
+        <div className="actions"><button type="button" onClick={() => setEditingStartDate(null)}>Cancel</button><button className="primary" type="submit">Save Start Date</button></div>
+      </form>
+    </div>}
   </section>;
 }
 
