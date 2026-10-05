@@ -854,6 +854,26 @@ header .muted {
   gap: 14px;
 }
 
+.install-app-card-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.install-app-card-link:hover {
+  color: inherit;
+  text-decoration: none;
+  transform: translateY(-2px);
+  border-color: #8fc7a4;
+  box-shadow: 0 12px 26px rgba(8, 127, 61, 0.14);
+}
+
+.install-app-card-link:focus-visible {
+  outline: 3px solid rgba(8, 127, 61, 0.28);
+  outline-offset: 3px;
+}
+
 .install-app-icon {
   width: 48px;
   height: 48px;
@@ -1528,4 +1548,1337 @@ tbody tr:hover {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* =========================================================
+   LIVE UI / USABILITY UPDATES
+   ========================================================= */
+.brand img {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0,0,0,.16);
+}
+
+.logo img {
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  object-fit: cover;
+}
+
+.password-field {
+  position: relative;
+}
+.password-field input {
+  padding-right: 66px;
+}
+.password-toggle {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--green);
+  font-size: 12px;
+}
+.password-toggle:hover { transform: translateY(-50%); background: var(--green-soft); }
+.eye-toggle {
+  min-width: 38px;
+  padding: 6px 7px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.refresh-btn {
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--green-dark);
+  box-shadow: 0 6px 15px rgba(7,60,35,.06);
+}
+.refresh-btn:disabled { opacity: .65; cursor: wait; transform: none; }
+.live-status {
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: #168b49;
+  font-weight: 750;
+}
+.live-status::first-letter { text-shadow: 0 0 7px rgba(24,169,87,.65); }
+.loan-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.loan-filters input, .loan-filters select {
+  border: 1px solid var(--border);
+  background: #fbfdfc;
+  border-radius: 10px;
+  padding: 9px 11px;
+  color: var(--text);
+  outline: none;
+}
+.loan-filters input:focus, .loan-filters select:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(8,127,61,.08);
+}
+.install-app-icon img { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; }
+
+@media (max-width: 850px) {
+  header { gap: 15px; }
+  .header-actions { justify-content: flex-start; }
+  .loan-filters { width: 100%; }
+  .loan-filters input { flex: 1; min-width: 0; }
+}
+
+@media (max-width: 650px) {
+  .brand img { width: 32px; height: 32px; }
+  .loan-filters { flex-direction: column; align-items: stretch; }
+  .loan-filters input, .loan-filters select { width: 100%; }
+  .header-actions { width: 100%; }
+  .refresh-btn { width: 100%; }
+}
+
+
+/* =========================================================
+   DASHBOARD CUSTOMER / PAYMENT ACTIONS
+   ========================================================= */
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 10px;
+}
+
+.dashboard-loan-table {
+  min-width: 1040px;
+}
+
+.dashboard-loan-table tbody tr {
+  vertical-align: middle;
+}
+
+.customer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 8px 5px 4px;
+  background: transparent;
+  color: var(--green-dark);
+  border-radius: 10px;
+  text-align: left;
+  font-weight: 800;
+}
+
+.customer-link:hover {
+  background: var(--green-soft);
+  color: var(--green);
+  transform: none;
+}
+
+.customer-avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #087f3d, #18a957);
+  color: #fff;
+  font-size: 13px;
+  box-shadow: 0 5px 12px rgba(8, 127, 61, .18);
+}
+
+.next-payment-cell strong {
+  display: block;
+  color: var(--green-dark);
+}
+
+.next-payment-cell small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.table-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.table-actions button {
+  padding: 7px 9px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.pay-btn {
+  background: linear-gradient(135deg, #087f3d, #18a957);
+  color: #fff;
+  box-shadow: 0 5px 12px rgba(8, 127, 61, .15);
+}
+
+.pay-btn:hover {
+  background: linear-gradient(135deg, #076d35, #13a451);
+}
+
+.pay-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Customer payment modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(3, 28, 17, .58);
+  backdrop-filter: blur(5px);
+  animation: modalFade .2s ease;
+}
+
+.customer-modal {
+  width: min(900px, 100%);
+  max-height: min(90vh, 900px);
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid rgba(255,255,255,.75);
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 30px 90px rgba(0,0,0,.24);
+  animation: modalUp .25s ease;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.modal-header h3 {
+  margin: 3px 0 4px;
+  font-size: 25px;
+}
+
+.modal-kicker {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+}
+
+.modal-close {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  background: #f0f5f2;
+  color: var(--green-dark);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  background: #e3eee7;
+  transform: none;
+}
+
+.customer-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.customer-summary > div {
+  padding: 14px;
+  border-radius: 13px;
+  border: 1px solid #e0ebe3;
+  background: linear-gradient(135deg, #f8fbf9, #eef7f1);
+}
+
+.customer-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.customer-summary strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--green-dark);
+  font-size: 17px;
+}
+
+.customer-summary small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.remaining-highlight {
+  color: #087f3d !important;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.modal-actions button {
+  font-size: 12px;
+}
+
+.modal-schedule {
+  padding: 17px;
+  border-radius: 15px;
+  border: 1px solid #dfeae3;
+  background: #f8fbf9;
+}
+
+.modal-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.modal-section-heading h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.modal-payment-list {
+  border-top: 1px solid #e1e8e3;
+}
+
+.modal-payment-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e1e8e3;
+}
+
+.modal-payment-row:last-child {
+  border-bottom: 0;
+}
+
+.modal-payment-row > div:first-child b {
+  display: block;
+}
+
+.modal-payment-row small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.modal-payment-row.partial {
+  background: linear-gradient(90deg, rgba(234,240,255,.5), transparent);
+}
+
+.modal-edit-form {
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
+@keyframes modalFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalUp {
+  from { opacity: 0; transform: translateY(14px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 800px) {
+  .customer-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .modal-payment-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .modal-payment-row .badge {
+    justify-self: start;
+  }
+
+  .modal-payment-row .pay-btn {
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 600px) {
+  .modal-backdrop {
+    padding: 10px;
+    align-items: end;
+  }
+
+  .customer-modal {
+    max-height: 94vh;
+    padding: 18px;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .customer-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .modal-actions button {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .modal-actions .primary {
+    flex-basis: 100%;
+  }
+
+  .modal-payment-row {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+}
+
+/* =========================================================
+   PROFILE / ACCOUNT SETTINGS
+   ========================================================= */
+.profile-mini {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  background: transparent;
+  color: rgba(255,255,255,.88);
+  text-align: left;
+}
+.profile-mini:hover { background: rgba(255,255,255,.07); transform: none; }
+.profile-mini img, .profile-mini-fallback {
+  width: 34px; height: 34px; flex: 0 0 34px; border-radius: 50%;
+  object-fit: cover; display: grid; place-items: center;
+}
+.profile-mini-fallback { background: linear-gradient(135deg,#f5b942,#ffd86a); color: #173425; font-weight: 900; }
+.profile-mini span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-page { display: grid; gap: 16px; }
+.profile-hero { display: flex; align-items: center; gap: 18px; padding: 22px; }
+.profile-hero-avatar, .avatar-large {
+  border-radius: 50%; overflow: hidden; display: grid; place-items: center;
+  background: linear-gradient(135deg,#087f3d,#18a957); color: white; font-weight: 900;
+}
+.profile-hero-avatar { width: 76px; height: 76px; flex: 0 0 76px; font-size: 28px; box-shadow: 0 10px 25px rgba(8,127,61,.18); }
+.profile-hero-avatar img, .avatar-large img { width: 100%; height: 100%; object-fit: cover; }
+.profile-hero h3 { margin: 4px 0; font-size: 25px; }
+.profile-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.profile-card { padding: 22px; }
+.profile-card-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px; }
+.profile-card-heading h3 { margin:0 0 4px; }
+.settings-icon { width:40px; height:40px; display:grid; place-items:center; border-radius:12px; background:var(--green-soft); }
+.avatar-upload { display:flex; align-items:center; gap:15px; padding:14px; border:1px solid var(--border); border-radius:14px; background:#f8fbf9; margin-bottom:16px; }
+.avatar-large { width:82px; height:82px; flex:0 0 82px; font-size:30px; }
+.upload-button { display:inline-flex; align-items:center; width:auto; padding:9px 12px; border-radius:10px; background:var(--green); color:#fff; font-weight:800; cursor:pointer; }
+.upload-button:hover { background:var(--green-dark); }
+.remove-avatar { margin-left:7px; padding:9px 12px; background:#f0f3f1; }
+.remove-avatar:disabled { opacity:.45; cursor:not-allowed; }
+.profile-message { margin:0; }
+.profile-success { padding:11px 14px; border-radius:10px; background:#e8f8ee; border:1px solid #bfe8ce; color:#087f3d; font-weight:700; }
+@media (max-width: 800px) { .profile-grid { grid-template-columns:1fr; } }
+@media (max-width: 600px) { .profile-hero { align-items:flex-start; } .avatar-upload { align-items:flex-start; } .remove-avatar { margin:7px 0 0; } }
+
+/* =========================================================
+   PROFILE — UNIQUE CASH-FLOW THEME
+   ========================================================= */
+.profile-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 6px 2px 30px;
+  border-radius: 28px;
+}
+
+.profile-page::before,
+.profile-page::after {
+  content: "₱   💵   $   ₱   💸   ₱   💵   $   ₱   💸";
+  position: absolute;
+  top: -130px;
+  left: -18%;
+  width: 136%;
+  height: 150px;
+  pointer-events: none;
+  z-index: -1;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 34px;
+  line-height: 1.7;
+  white-space: nowrap;
+  color: rgba(8, 127, 61, 0.12);
+  transform: rotate(-7deg);
+  animation: cashFall 15s linear infinite;
+}
+
+.profile-page::after {
+  top: -210px;
+  left: -10%;
+  color: rgba(245, 185, 66, 0.13);
+  font-size: 19px;
+  letter-spacing: 48px;
+  transform: rotate(8deg);
+  animation: cashFallReverse 19s linear infinite;
+  animation-delay: -8s;
+}
+
+@keyframes cashFall {
+  0% {
+    transform: translate3d(0, -20px, 0) rotate(-7deg);
+    opacity: 0;
+  }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% {
+    transform: translate3d(80px, 125vh, 0) rotate(5deg);
+    opacity: 0;
+  }
+}
+
+@keyframes cashFallReverse {
+  0% {
+    transform: translate3d(0, -40px, 0) rotate(8deg);
+    opacity: 0;
+  }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% {
+    transform: translate3d(-100px, 125vh, 0) rotate(-4deg);
+    opacity: 0;
+  }
+}
+
+.profile-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-page .panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(192, 220, 203, 0.9);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.97), rgba(247,252,249,.94));
+  box-shadow:
+    0 18px 45px rgba(6, 59, 36, 0.08),
+    inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+.profile-page .panel::before {
+  content: "₱";
+  position: absolute;
+  right: -18px;
+  bottom: -65px;
+  font-size: 190px;
+  line-height: 1;
+  font-weight: 950;
+  color: rgba(8, 127, 61, 0.035);
+  transform: rotate(-10deg);
+  pointer-events: none;
+}
+
+.profile-page .panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-hero {
+  min-height: 150px;
+  padding: 27px 30px;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(circle at 88% 20%, rgba(245,185,66,.18), transparent 22%),
+    linear-gradient(135deg, rgba(239,251,244,.98), rgba(255,255,255,.96)) !important;
+}
+
+.profile-hero-avatar {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  flex: 0 0 88px;
+  border: 4px solid rgba(255,255,255,.9);
+  background: linear-gradient(135deg, #0b9a4b, #18b65e 55%, #f5b942);
+  box-shadow:
+    0 12px 28px rgba(8,127,61,.22),
+    0 0 0 7px rgba(24,169,87,.08);
+  font-size: 32px;
+}
+
+.profile-hero-avatar::after {
+  content: "✦";
+  position: absolute;
+  right: -3px;
+  bottom: -2px;
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #f5b942;
+  color: #684600;
+  border: 3px solid #fff;
+  font-size: 12px;
+}
+
+.profile-hero h3 {
+  font-size: 29px;
+  letter-spacing: -0.7px;
+  color: #083c25;
+}
+
+.profile-hero .muted {
+  max-width: 620px;
+}
+
+.profile-grid {
+  gap: 22px;
+}
+
+.profile-card {
+  border-radius: 22px !important;
+  padding: 25px !important;
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+
+.profile-card:hover {
+  transform: translateY(-4px);
+  border-color: #abd3b9 !important;
+  box-shadow: 0 22px 48px rgba(6,59,36,.12) !important;
+}
+
+.profile-card-heading {
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5eee8;
+}
+
+.profile-card-heading h3 {
+  font-size: 21px;
+  color: #123b29;
+}
+
+.profile-card-heading p {
+  margin: 0;
+}
+
+.settings-icon {
+  width: 45px;
+  height: 45px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #e6f8ed, #fff4d2);
+  border: 1px solid #d3e9da;
+  box-shadow: 0 7px 18px rgba(8,127,61,.08);
+  font-size: 19px;
+}
+
+/* Fixes the cramped Profile form shown in the screenshot. */
+.profile-card label {
+  display: block;
+  margin: 0 0 15px;
+  color: #294137;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.profile-card input:not([type="file"]) {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  min-height: 46px;
+  padding: 12px 14px;
+  border: 1px solid #cfdfd5;
+  border-radius: 12px;
+  outline: none;
+  background: rgba(255,255,255,.88);
+  color: #183026;
+  box-shadow: inset 0 1px 2px rgba(6,59,36,.03);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease, background .2s ease;
+}
+
+.profile-card input:not([type="file"]):hover {
+  border-color: #9fc9ad;
+}
+
+.profile-card input:not([type="file"]):focus {
+  border-color: #0b9850;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(11,152,80,.10), 0 7px 18px rgba(8,127,61,.06);
+  transform: translateY(-1px);
+}
+
+.avatar-upload {
+  position: relative;
+  overflow: hidden;
+  min-height: 112px;
+  padding: 16px;
+  border: 1px solid #d5e7db;
+  border-radius: 17px;
+  background:
+    radial-gradient(circle at 95% 10%, rgba(245,185,66,.16), transparent 28%),
+    linear-gradient(135deg, #f5fbf7, #ffffff);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+.avatar-upload::after {
+  content: "💵  ₱  💸";
+  position: absolute;
+  right: -5px;
+  bottom: -12px;
+  font-size: 28px;
+  opacity: .07;
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+
+.avatar-large {
+  width: 88px;
+  height: 88px;
+  flex: 0 0 88px;
+  border: 3px solid #fff;
+  background: linear-gradient(135deg,#0a9148,#18ad58);
+  box-shadow: 0 9px 22px rgba(8,127,61,.18);
+}
+
+.upload-button {
+  position: relative;
+  z-index: 2;
+  min-height: 42px;
+  padding: 10px 15px;
+  border-radius: 11px;
+  background: linear-gradient(135deg,#087f3d,#14a755);
+  box-shadow: 0 8px 18px rgba(8,127,61,.18);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.upload-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(8,127,61,.24);
+}
+
+.remove-avatar {
+  min-height: 42px;
+  border: 1px solid #dce6df;
+  background: #f5f8f6;
+  color: #6b7971;
+}
+
+.remove-avatar:hover:not(:disabled) {
+  background: #fff0f0;
+  color: #b8323e;
+  border-color: #f1c9cd;
+}
+
+.profile-card .primary {
+  min-height: 46px;
+  border-radius: 12px;
+  letter-spacing: .1px;
+}
+
+.profile-success,
+.profile-message.error {
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(7,60,35,.06);
+}
+
+.profile-success {
+  border-color: #b8e4c7;
+  background: linear-gradient(135deg,#e8f9ef,#f8fdf9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-page::before,
+  .profile-page::after,
+  .profile-card,
+  .profile-card input:not([type="file"]),
+  .upload-button {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (max-width: 800px) {
+  .profile-grid { grid-template-columns: 1fr; }
+  .profile-hero { padding: 22px; }
+}
+
+@media (max-width: 600px) {
+  .profile-page { padding: 0 0 22px; }
+  .profile-hero { flex-direction: column; align-items: flex-start; }
+  .profile-card { padding: 19px !important; }
+  .avatar-upload { align-items: center; }
+  .profile-hero-avatar { width: 76px; height: 76px; flex-basis: 76px; }
+}
+
+/* =========================================================
+   BUSINESS LOAN — LIVING MONEY THEME OVERRIDES
+   Keeps the existing components/behavior, but gives each
+   screen its own financial visual identity.
+   ========================================================= */
+
+/* ---------- animated money layer ---------- */
+.money-rain {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.money-rain span {
+  position: absolute;
+  top: -12vh;
+  left: 5%;
+  font-size: 18px;
+  font-weight: 900;
+  opacity: .16;
+  color: #f5d36b;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,.08));
+  transform: rotate(-25deg);
+  animation: moneyDrop 10s linear infinite;
+  animation-delay: -1s;
+}
+.money-rain span:nth-child(3n) { color: #fff1a8; opacity: .13; }
+.money-rain span:nth-child(4n) { color: #8de0ac; opacity: .12; }
+.money-rain span:nth-child(5n) { font-size: 28px; }
+@keyframes moneyDrop {
+  0% { transform: translate3d(0,-15vh,0) rotate(-25deg); opacity: 0; }
+  10% { opacity: .15; }
+  50% { transform: translate3d(35px,55vh,0) rotate(80deg); opacity: .18; }
+  90% { opacity: .12; }
+  100% { transform: translate3d(-30px,115vh,0) rotate(180deg); opacity: 0; }
+}
+
+/* ---------- login / intro ---------- */
+.auth-page {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 12% 20%, rgba(34,197,94,.22), transparent 25%),
+    radial-gradient(circle at 86% 78%, rgba(245,185,66,.18), transparent 24%),
+    linear-gradient(135deg,#032b1b 0%,#07552f 48%,#0b7c3e 100%);
+}
+.auth-page > .money-rain { z-index: -1; }
+.auth-card {
+  width: min(1020px, calc(100vw - 36px));
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, .95fr);
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  border: 1px solid rgba(255,255,255,.7);
+  background: rgba(250,253,251,.97);
+  box-shadow: 0 35px 90px rgba(0,0,0,.28), 0 0 0 1px rgba(245,185,66,.1);
+}
+.auth-intro {
+  padding: 44px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(245,185,66,.22), transparent 24%),
+    linear-gradient(145deg,#063b24,#087f3d 60%,#0a6d38);
+  position: relative;
+  overflow: hidden;
+}
+.auth-intro::after {
+  content: '₱';
+  position: absolute;
+  right: -40px;
+  bottom: -110px;
+  font-size: 310px;
+  line-height: 1;
+  color: rgba(255,255,255,.045);
+  font-weight: 950;
+  transform: rotate(-14deg);
+}
+.auth-intro .logo { margin: 0 0 22px; }
+.auth-kicker {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.15);
+  color: #ffe38a;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+}
+.auth-intro h1 {
+  color: #fff;
+  background: none;
+  -webkit-text-fill-color: #fff;
+  margin: 15px 0 10px;
+  font-size: clamp(32px,4vw,46px);
+}
+.auth-intro > p { color: rgba(255,255,255,.76); max-width: 470px; line-height: 1.6; }
+.how-it-works { margin-top: 28px; display: grid; gap: 12px; position: relative; z-index: 2; }
+.how-it-works > div { display:flex; align-items:center; gap:13px; padding:12px; border-radius:15px; background:rgba(255,255,255,.075); border:1px solid rgba(255,255,255,.1); backdrop-filter: blur(6px); }
+.how-it-works b { width:34px; height:34px; flex:0 0 34px; display:grid; place-items:center; border-radius:11px; background:#f5b942; color:#173425; font-size:11px; }
+.how-it-works span { display:grid; gap:2px; }
+.how-it-works strong { font-size:13px; }
+.how-it-works small { color:rgba(255,255,255,.65); font-size:11px; }
+.auth-form-wrap { padding: 44px; display:flex; flex-direction:column; justify-content:center; background:linear-gradient(145deg,#fff,#f5faf7); }
+.auth-form-title { font-size:24px; font-weight:900; color:#123524; }
+.auth-form-subtitle { margin:5px 0 0; color:#75857c; font-size:13px; }
+.auth-form-wrap form { margin-top:22px; }
+.auth-form-wrap .switch { text-align:center; }
+.auth-card .logo { width:76px; height:76px; }
+
+/* ---------- whole application background ---------- */
+.app { position:relative; isolation:isolate; overflow:hidden; }
+.app::before {
+  content:'';
+  position:absolute; inset:0; pointer-events:none; z-index:-3;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(24,169,87,.10), transparent 24%),
+    radial-gradient(circle at 88% 85%, rgba(245,185,66,.11), transparent 24%);
+}
+.app main { position:relative; overflow:hidden; }
+.app main > .money-rain { z-index:-1; opacity:.72; }
+.page-dashboard main::after,
+.page-loans main::after,
+.page-profile main::after {
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:-2;
+}
+.page-dashboard main::after { background: radial-gradient(circle at 78% 14%, rgba(24,169,87,.08), transparent 30%), linear-gradient(135deg,transparent 50%,rgba(245,185,66,.045)); }
+.page-loans main::after { background: radial-gradient(circle at 75% 16%, rgba(245,185,66,.10), transparent 28%), radial-gradient(circle at 15% 80%, rgba(8,127,61,.07), transparent 25%); }
+.page-profile main::after { background: radial-gradient(circle at 70% 15%, rgba(24,169,87,.08), transparent 28%), radial-gradient(circle at 20% 80%, rgba(245,185,66,.08), transparent 26%); }
+
+/* ---------- dashboard cash identity ---------- */
+.page-dashboard .stat { background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(241,250,245,.94)); }
+.page-dashboard .stat:nth-child(2) { border-top:3px solid #18a957; }
+.page-dashboard .stat:nth-child(3) { border-top:3px solid #f5b942; }
+.page-dashboard .stat:nth-child(4) { border-top:3px solid #5abf85; }
+.page-dashboard .install-app-card { background:linear-gradient(110deg,rgba(239,251,244,.98),rgba(255,249,226,.95)); border-color:#c9e7d4; }
+.page-dashboard .panel { background:rgba(255,255,255,.91); backdrop-filter:blur(7px); }
+
+/* ---------- loans identity ---------- */
+.page-loans .loan-form-panel { background:linear-gradient(145deg,rgba(255,255,255,.97),rgba(237,250,243,.94)); border-top:3px solid #18a957; }
+.page-loans .loan-card { background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(248,252,249,.94)); position:relative; overflow:hidden; }
+.page-loans .loan-card::after { content:'₱'; position:absolute; right:-12px; bottom:-42px; font-size:150px; line-height:1; color:rgba(8,127,61,.035); font-weight:950; transform:rotate(-12deg); pointer-events:none; }
+.page-loans .loan-edit-form { background:linear-gradient(135deg,#fff9e8,#f4fbf7); border:1px solid #ead49a; box-shadow:inset 0 1px 0 rgba(255,255,255,.9); }
+.page-loans .loan-edit-form h4 { color:#6e5200; letter-spacing:.1px; }
+.page-loans .loan-edit-grid label { color:#31453b; }
+.page-loans .loan-edit-grid input { width:100%; min-height:45px; margin-top:7px; border:1px solid #cddfd4; border-radius:12px; padding:11px 13px; background:#fff; outline:none; }
+.page-loans .loan-edit-grid input:focus { border-color:#18a957; box-shadow:0 0 0 4px rgba(24,169,87,.10); }
+.page-loans .loan-edit-form .actions { display:flex; gap:9px; margin-top:14px; }
+.page-loans .loan-edit-form .actions button[type='button'] { background:#eef2ef; }
+
+/* ---------- profile identity ---------- */
+.page-profile main > .money-rain span { opacity:.10; color:#087f3d; }
+.page-profile .profile-page .panel { box-shadow:0 20px 50px rgba(6,59,36,.08); }
+
+/* ---------- stronger customer/payment actions ---------- */
+.customer-link { border-radius:12px; padding:5px 8px; }
+.customer-link:hover { background:#e9f8ef; color:#087f3d; transform:none; }
+.pay-btn { background:linear-gradient(135deg,#087f3d,#13a451); color:#fff; box-shadow:0 6px 14px rgba(8,127,61,.18); }
+.pay-btn:hover { background:linear-gradient(135deg,#076d35,#10a04e); }
+
+/* ---------- accessibility / mobile ---------- */
+@media (max-width: 850px) {
+  .auth-card { grid-template-columns:1fr; width:min(620px,calc(100vw - 26px)); }
+  .auth-intro { padding:30px; }
+  .auth-form-wrap { padding:30px; }
+  .how-it-works { grid-template-columns:1fr; }
+}
+@media (max-width: 600px) {
+  .auth-page { padding:13px; }
+  .auth-card { border-radius:22px; }
+  .auth-intro, .auth-form-wrap { padding:24px; }
+  .auth-intro h1 { font-size:31px; }
+  .how-it-works > div { padding:10px; }
+  .money-rain span { font-size:14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .money-rain span, .logo { animation:none !important; }
+}
+
+/* =========================================================
+   LOAN CALENDAR / START DATE
+   ========================================================= */
+
+.calendar-field {
+  position: relative;
+}
+
+.loan-form input[type="date"],
+.loan-edit-grid input[type="date"] {
+  cursor: pointer;
+  color-scheme: light;
+  min-height: 46px;
+}
+
+.loan-form input[type="date"]::-webkit-calendar-picker-indicator,
+.loan-edit-grid input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 4px;
+  opacity: .75;
+}
+
+.schedule-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(228,248,236,.95), rgba(255,250,226,.9));
+  border: 1px solid #cfe6d6;
+}
+
+.schedule-heading h4 {
+  margin: 0 0 3px;
+}
+
+.schedule-heading small {
+  color: #687b70;
+}
+
+.calendar-chip {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #d9e8dd;
+  color: #08723a;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.loan-card .loan-card-top .muted {
+  display: block;
+  margin-top: 3px;
+}
+
+@media (max-width: 760px) {
+  .schedule-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+
+/* ---------- profile avatar selector / large uploads ---------- */
+.profile-mini > img,
+.profile-mini > .avatar-preset,
+.profile-hero-avatar > img,
+.profile-hero-avatar > .avatar-preset,
+.avatar-large > img,
+.avatar-large > .avatar-preset { width:100%; height:100%; object-fit:cover; display:grid; place-items:center; }
+.profile-mini > .avatar-preset,
+.profile-hero-avatar > .avatar-preset,
+.avatar-large > .avatar-preset { border-radius:inherit; }
+.avatar-preset { line-height:1; font-family: "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.avatar-preset-initial { font-family: inherit; font-weight:900; color:#fff; background:linear-gradient(145deg,#18a957,#087f3d); }
+.avatar-preset-business { background:linear-gradient(145deg,#f8cf58,#f5a900); }
+.avatar-preset-money { background:linear-gradient(145deg,#f8cf58,#18a957); }
+.avatar-preset-girl,.avatar-preset-boy,.avatar-preset-woman,.avatar-preset-man,.avatar-preset-student-girl,.avatar-preset-student-boy { background:linear-gradient(145deg,#eefaf3,#fff5d8); }
+.avatar-controls { min-width:0; flex:1; display:grid; gap:12px; }
+.avatar-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.avatar-presets { display:grid; gap:7px; }
+.avatar-preset-grid { display:flex; flex-wrap:wrap; gap:7px; }
+.avatar-preset-button { width:42px; height:42px; padding:3px; border:2px solid #d7e7dd; border-radius:13px; background:#fff; cursor:pointer; box-shadow:0 4px 10px rgba(6,59,36,.06); transition:.18s ease; }
+.avatar-preset-button:hover { transform:translateY(-2px); border-color:#18a957; box-shadow:0 8px 16px rgba(6,59,36,.12); }
+.avatar-preset-button.selected { border-color:#f5b942; box-shadow:0 0 0 3px rgba(245,185,66,.18),0 8px 16px rgba(6,59,36,.10); }
+.avatar-preset-button .avatar-preset { width:100%; height:100%; border-radius:9px; font-size:21px; }
+.avatar-upload .muted.small { margin:0; }
+@media (max-width:600px) {
+  .avatar-actions { align-items:stretch; }
+  .avatar-preset-button { width:40px; height:40px; }
+}
+
+.avatar-clickable { position:relative; display:grid; place-items:center; cursor:pointer; overflow:hidden; }
+.avatar-clickable::before { content:""; position:absolute; inset:0; background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(245,185,66,.16)); opacity:0; transition:.2s ease; z-index:1; }
+.avatar-clickable:hover::before { opacity:1; }
+.avatar-change-badge { position:absolute; right:-1px; bottom:-1px; width:28px; height:28px; display:grid; place-items:center; border-radius:50%; background:#f5b942; color:#173425; border:3px solid #fff; font-size:14px; font-weight:900; z-index:3; box-shadow:0 5px 12px rgba(0,0,0,.14); }
+.avatar-clickable > .avatar-preset,
+.avatar-clickable > img { position:relative; z-index:2; }
+
+/* =========================================================
+   DELETE THROW-AWAY EFFECT
+   The record animates out first, then the existing delete API
+   removes it. No database or loan calculation logic is changed.
+   ========================================================= */
+.loan-row-deleting {
+  animation: loanRowThrow 0.65s cubic-bezier(.22,.61,.36,1) forwards;
+  pointer-events: none;
+}
+
+.loan-row-deleting td {
+  animation: loanCellFade 0.65s ease forwards;
+}
+
+.loan-card-deleting {
+  position: relative;
+  overflow: hidden;
+  animation: loanCardThrow 0.65s cubic-bezier(.22,.61,.36,1) forwards;
+  pointer-events: none;
+}
+
+.loan-card-deleting::after {
+  content: '🗑️';
+  position: absolute;
+  right: 28px;
+  top: 50%;
+  font-size: 2.2rem;
+  opacity: 0;
+  animation: trashDrop 0.65s ease forwards;
+  pointer-events: none;
+}
+
+.loan-card-deleting::before {
+  content: '💸  ₱  💵';
+  position: absolute;
+  right: 80px;
+  top: 48%;
+  font-size: 1.15rem;
+  letter-spacing: 10px;
+  opacity: 0;
+  animation: moneyFlyAway 0.65s ease-out forwards;
+  pointer-events: none;
+}
+
+.delete-btn:disabled {
+  cursor: wait;
+  opacity: .78;
+}
+
+@keyframes loanRowThrow {
+  0% { opacity: 1; transform: translateX(0) rotate(0); }
+  45% { opacity: .9; transform: translateX(18px) rotate(1deg); }
+  100% { opacity: 0; transform: translateX(110%) rotate(4deg); height: 0; }
+}
+
+@keyframes loanCellFade {
+  0% { opacity: 1; }
+  70% { opacity: .45; }
+  100% { opacity: 0; }
+}
+
+@keyframes loanCardThrow {
+  0% { opacity: 1; transform: translateX(0) rotate(0) scale(1); }
+  45% { opacity: .96; transform: translateX(22px) rotate(1deg) scale(.99); }
+  100% { opacity: 0; transform: translateX(115%) rotate(4deg) scale(.94); max-height: 0; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+}
+
+@keyframes trashDrop {
+  0% { opacity: 0; transform: translate(0, -50%) scale(.6) rotate(-20deg); }
+  35% { opacity: 1; transform: translate(0, -50%) scale(1.1) rotate(8deg); }
+  100% { opacity: 0; transform: translate(10px, 120%) scale(.75) rotate(20deg); }
+}
+
+@keyframes moneyFlyAway {
+  0% { opacity: 0; transform: translate(0, -50%) scale(.7) rotate(0); }
+  25% { opacity: .9; }
+  100% { opacity: 0; transform: translate(80px, -85px) scale(1.15) rotate(12deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loan-row-deleting,
+  .loan-row-deleting td,
+  .loan-card-deleting,
+  .loan-card-deleting::before,
+  .loan-card-deleting::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* =========================================================
+   PROFILE PHOTO CROPPER
+   ========================================================= */
+.avatar-crop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(3, 24, 14, .62);
+  backdrop-filter: blur(7px);
+}
+.avatar-crop-modal {
+  width: min(100%, 470px);
+  max-height: min(92vh, 760px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,.7);
+  border-radius: 24px;
+  background: linear-gradient(145deg,#ffffff,#f4fbf7);
+  box-shadow: 0 30px 80px rgba(0,0,0,.30);
+}
+.avatar-crop-header { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:15px; }
+.avatar-crop-header h3 { margin:3px 0 4px; font-size:24px; }
+.avatar-crop-close { width:38px; height:38px; padding:0; border-radius:50%; font-size:25px; line-height:1; background:#edf3ef; }
+.avatar-crop-stage {
+  position:relative;
+  width:min(100%,280px);
+  aspect-ratio:1;
+  margin:0 auto 16px;
+  overflow:hidden;
+  border-radius:50%;
+  background:#12251b;
+  border:6px solid #fff;
+  box-shadow:0 12px 30px rgba(6,59,36,.20), 0 0 0 2px #d8e8df;
+  touch-action:none;
+  cursor:grab;
+  user-select:none;
+}
+.avatar-crop-stage.dragging { cursor:grabbing; }
+.avatar-crop-stage img {
+  position:absolute;
+  left:50%;
+  top:50%;
+  max-width:none;
+  width:auto;
+  height:auto;
+  transform-origin:center center;
+  pointer-events:none;
+  user-select:none;
+}
+.avatar-crop-circle {
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.85), inset 0 0 0 999px rgba(255,255,255,.02);
+  pointer-events:none;
+}
+.avatar-zoom-label { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:12px; font-weight:800; margin:10px 2px; }
+.avatar-zoom-label input { width:100%; accent-color:#087f3d; }
+.avatar-crop-hint { padding:10px 12px; border-radius:11px; background:#eaf8ef; border:1px solid #ccebd7; color:#286044; font-size:13px; line-height:1.45; margin-bottom:14px; }
+.avatar-crop-actions { display:flex; justify-content:flex-end; gap:9px; }
+@media (max-width:600px) {
+  .avatar-crop-overlay { padding:10px; }
+  .avatar-crop-modal { padding:16px; border-radius:20px; }
+  .avatar-crop-stage { width:min(78vw,280px); }
+  .avatar-crop-actions { flex-direction:column-reverse; }
+  .avatar-crop-actions button { width:100%; }
+}
+
+
+/* =========================================================
+   LOAN / CUSTOMER POCKET DEPOSIT EFFECT
+   ========================================================= */
+.pocket-deposit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3, 24, 14, .48);
+  backdrop-filter: blur(5px);
+  pointer-events: none;
+  animation: pocketOverlayIn .22s ease-out both;
+}
+.pocket-deposit-card {
+  width: min(92vw, 420px);
+  padding: 20px 18px 22px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,.8);
+  border-radius: 24px;
+  background: linear-gradient(145deg, #ffffff, #f0fbf5);
+  box-shadow: 0 28px 80px rgba(0,0,0,.24);
+  color: var(--text);
+}
+.pocket-deposit-kicker {
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 8px;
+}
+.pocket-deposit-scene {
+  position: relative;
+  height: 210px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.pocket-money-image {
+  position: absolute;
+  width: 190px;
+  height: 190px;
+  object-fit: contain;
+  animation: pocketPop .55s cubic-bezier(.2,.85,.3,1.25) .15s both;
+  filter: drop-shadow(0 16px 22px rgba(8,127,61,.18));
+}
+.pocket-customer-name {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  max-width: 78%;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid #18a957;
+  color: #063b24;
+  font-weight: 900;
+  box-shadow: 0 10px 25px rgba(8,127,61,.18);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: nameIntoPocket 1.25s cubic-bezier(.2,.75,.25,1) .35s both;
+}
+.pocket-name-shadow {
+  position: absolute;
+  z-index: 1;
+  width: 100px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(6,59,36,.16);
+  bottom: 18px;
+  filter: blur(8px);
+  animation: pocketShadow 1.25s ease .35s both;
+}
+.pocket-deposit-card > strong { color: var(--green-dark); }
+@keyframes nameIntoPocket {
+  0% { opacity: 0; transform: translateY(-75px) scale(.88); }
+  18% { opacity: 1; transform: translateY(-58px) scale(1); }
+  68% { opacity: 1; transform: translateY(42px) scale(.86); }
+  100% { opacity: 0; transform: translateY(64px) scale(.55); }
+}
+@keyframes pocketPop {
+  0% { opacity: 0; transform: scale(.55) rotate(-5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes pocketShadow {
+  0%, 100% { opacity: .1; transform: scale(.65); }
+  55% { opacity: .35; transform: scale(1); }
+}
+@keyframes pocketOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width:600px) {
+  .pocket-deposit-card { padding: 18px 14px 20px; }
+  .pocket-deposit-scene { height: 190px; }
+  .pocket-money-image { width: 170px; height: 170px; }
 }

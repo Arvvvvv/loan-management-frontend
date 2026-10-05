@@ -1,11 +1,193 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import api from './api';
+import api, { isNetworkError } from './api';
 import { jsPDF } from 'jspdf';
 import './styles.css';
 
 const peso = n => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dateText = d => new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+const localDateInput = (d = new Date()) => { const x = new Date(d); const offset = x.getTimezoneOffset(); return new Date(x.getTime() - offset * 60000).toISOString().slice(0, 10); };
+
+const AVATAR_PRESETS = [
+  { id: 'initial', label: 'My Initial', value: 'preset:initial', glyph: 'A' },
+  { id: 'girl', label: 'Girl', value: 'preset:girl', glyph: '👩' },
+  { id: 'boy', label: 'Boy', value: 'preset:boy', glyph: '👨' },
+  { id: 'woman', label: 'Woman', value: 'preset:woman', glyph: '👩‍💼' },
+  { id: 'man', label: 'Man', value: 'preset:man', glyph: '👨‍💼' },
+  { id: 'student-girl', label: 'Student Girl', value: 'preset:student-girl', glyph: '👧' },
+  { id: 'student-boy', label: 'Student Boy', value: 'preset:student-boy', glyph: '👦' },
+  { id: 'business', label: 'Business', value: 'preset:business', glyph: '💼' },
+  { id: 'money', label: 'Money', value: 'preset:money', glyph: '💰' }
+];
+
+function AvatarView({ value, username = 'User', className = '' }) {
+  if (value && value.startsWith?.('data:image/')) return <img className={className} src={value} alt={`${username} avatar`} />;
+  const preset = AVATAR_PRESETS.find(a => a.value === value);
+  if (preset) return <span className={`${className} avatar-preset avatar-preset-${preset.id}`} aria-label={preset.label}>{preset.id === 'initial' ? (username || 'U').charAt(0).toUpperCase() : preset.glyph}</span>;
+  return <span className={`${className} profile-mini-fallback`}>{(username || 'U').charAt(0).toUpperCase()}</span>;
+}
+
+async function compressAvatarDataUrl(dataUrl, maxSize = 640, maxChars = 700000) {
+  if (!dataUrl?.startsWith?.('data:image/')) return dataUrl || '';
+  return await new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSize / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round((img.naturalWidth || maxSize) * scale));
+      canvas.height = Math.max(1, Math.round((img.naturalHeight || maxSize) * scale));
+      const ctx = canvas.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      let quality = 0.72;
+      let result = canvas.toDataURL('image/jpeg', quality);
+      while (result.length > maxChars && quality > 0.42) {
+        quality -= 0.05;
+        result = canvas.toDataURL('image/jpeg', quality);
+      }
+      resolve(result);
+    };
+    img.onerror = () => reject(new Error('Could not prepare the profile image.'));
+    img.src = dataUrl;
+  });
+}
+
+function PocketDepositAnimation({ name, onDone }) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, 2200);
+    return () => clearTimeout(timer);
+  }, [onDone]);
+  return <div className="pocket-deposit-overlay" aria-live="polite">
+    <div className="pocket-deposit-card">
+      <div className="pocket-deposit-kicker">Loan saved successfully</div>
+      <div className="pocket-deposit-scene">
+        <div className="pocket-customer-name">{name}</div>
+        <div className="pocket-name-shadow" />
+        <img src="/pocket-money-icon-source.png" alt="Money pocket" className="pocket-money-image" />
+      </div>
+      <strong>{name}</strong> <span>has been placed in your money pocket.</span>
+    </div>
+  </div>;
+}
+
+function AvatarCropper({ source, onCancel, onApply }) {
+  const STAGE = 280;
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef(null);
+
+  const baseScale = imageSize.width && imageSize.height
+    ? Math.max(STAGE / imageSize.width, STAGE / imageSize.height)
+    : 1;
+  const displayScale = baseScale * zoom;
+
+  const clampPosition = (x, y) => {
+    if (!imageSize.width || !imageSize.height) return { x, y };
+    const renderedWidth = imageSize.width * displayScale;
+    const renderedHeight = imageSize.height * displayScale;
+    const maxX = Math.max(0, (renderedWidth - STAGE) / 2);
+    const maxY = Math.max(0, (renderedHeight - STAGE) / 2);
+    return {
+      x: Math.max(-maxX, Math.min(maxX, x)),
+      y: Math.max(-maxY, Math.min(maxY, y))
+    };
+  };
+
+  useEffect(() => {
+    setZoom(1);
+    setPosition({ x: 0, y: 0 });
+  }, [source]);
+
+  useEffect(() => {
+    setPosition(p => clampPosition(p.x, p.y));
+  }, [zoom, imageSize.width, imageSize.height]);
+
+  const startDrag = e => {
+    e.preventDefault();
+    setDragging(true);
+    dragRef.current = { clientX: e.clientX, clientY: e.clientY, ...position };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const moveDrag = e => {
+    if (!dragging || !dragRef.current) return;
+    const next = clampPosition(
+      dragRef.current.x + e.clientX - dragRef.current.clientX,
+      dragRef.current.y + e.clientY - dragRef.current.clientY
+    );
+    setPosition(next);
+  };
+
+  const endDrag = () => {
+    setDragging(false);
+    dragRef.current = null;
+  };
+
+  const applyCrop = () => {
+    if (!imageSize.width || !imageSize.height) return;
+    const canvas = document.createElement('canvas');
+    const output = 640;
+    canvas.width = output;
+    canvas.height = output;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, output, output);
+
+    const sourceCropSize = Math.min(imageSize.width, imageSize.height, STAGE / displayScale);
+    const sourceCenterX = imageSize.width / 2 - position.x / displayScale;
+    const sourceCenterY = imageSize.height / 2 - position.y / displayScale;
+    const sx = Math.max(0, Math.min(imageSize.width - sourceCropSize, sourceCenterX - sourceCropSize / 2));
+    const sy = Math.max(0, Math.min(imageSize.height - sourceCropSize, sourceCenterY - sourceCropSize / 2));
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, sx, sy, sourceCropSize, sourceCropSize, 0, 0, output, output);
+      let quality = 0.82;
+      let result = canvas.toDataURL('image/jpeg', quality);
+      while (result.length > 650000 && quality > 0.42) {
+        quality -= 0.07;
+        result = canvas.toDataURL('image/jpeg', quality);
+      }
+      onApply(result);
+    };
+    img.src = source;
+  };
+
+  return <div className="avatar-crop-overlay" role="dialog" aria-modal="true" aria-label="Adjust profile picture">
+    <div className="avatar-crop-modal">
+      <div className="avatar-crop-header">
+        <div><span className="modal-kicker">Profile picture</span><h3>Adjust your photo</h3><p className="muted small">Drag the photo to position it. Use the slider to zoom.</p></div>
+        <button type="button" className="avatar-crop-close" onClick={onCancel} aria-label="Close">×</button>
+      </div>
+      <div
+        className={`avatar-crop-stage ${dragging ? 'dragging' : ''}`}
+        onPointerDown={startDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onPointerLeave={endDrag}
+      >
+        <img
+          src={source}
+          alt="Crop preview"
+          draggable="false"
+          onLoad={e => setImageSize({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })}
+          style={{ left: `calc(50% + ${position.x}px)`, top: `calc(50% + ${position.y}px)`, transform: `translate(-50%, -50%) scale(${displayScale})` }}
+        />
+        <div className="avatar-crop-circle" />
+      </div>
+      <label className="avatar-zoom-label">Zoom <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={e => setZoom(Number(e.target.value))} /></label>
+      <div className="avatar-crop-hint">Tip: drag up, down, left, or right until your face fits inside the circle.</div>
+      <div className="avatar-crop-actions">
+        <button type="button" className="remove-avatar" onClick={onCancel}>Cancel</button>
+        <button type="button" className="primary" onClick={applyCrop} disabled={!imageSize.width}>Use This Position</button>
+      </div>
+    </div>
+  </div>;
+}
 
 
 function downloadLoanReceipt(loan) {
@@ -30,6 +212,8 @@ function downloadLoanReceipt(loan) {
   doc.text(`Receipt No: ${receiptNo}`, right, y, { align: 'right' });
   y += 6;
   doc.text(`Issued: ${dateText(loan.createdAt)}`, right, y, { align: 'right' });
+  y += 6;
+  doc.text(`Loan Start Date: ${dateText(loan.startDate || loan.createdAt)}`, right, y, { align: 'right' });
   y += 8;
   line();
 
@@ -109,11 +293,27 @@ function downloadLoanReceipt(loan) {
   doc.save(`${receiptNo}-${borrower.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'borrower'}.pdf`);
 }
 
+function MoneyRain({ variant = 'app' }) {
+  const symbols = ['₱', '💵', '$', '💸', '₱', '💰', '₱', '$', '💵', '₱', '💸', '₱', '💰', '₱', '$', '💵', '₱', '💸'];
+  return <div className={`money-rain ${variant}`} aria-hidden="true">
+    {symbols.map((symbol, i) => {
+      const left = 2 + ((i * 5.6) % 96);
+      const size = 16 + ((i % 4) * 4);
+      const duration = 9 + ((i % 5) * 1.4);
+      const delay = -(i * 1.15);
+      const rotation = (i * 17) - 25;
+      return <span key={`${variant}-${i}`} style={{ left: `${left}%`, fontSize: `${size}px`, animationDuration: `${duration}s`, animationDelay: `${delay}s`, transform: `rotate(${rotation}deg)` }}>{symbol}</span>;
+    })}
+  </div>;
+}
+
 function Auth({ onLogin }) {
   const [register, setRegister] = useState(false);
   const [form, setForm] = useState({ username: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const submit = async e => {
     e.preventDefault();
@@ -122,68 +322,230 @@ function Auth({ onLogin }) {
     try {
       const r = await api.post(`/auth/${register ? 'register' : 'login'}`, form);
       localStorage.setItem('loan_token', r.data.token);
+      localStorage.setItem('loan_user', JSON.stringify(r.data.user));
       onLogin(r.data.user);
     } catch (e) {
-      setError(e.response?.data?.message || 'Unable to connect to the server.');
+      if (e.response?.data?.message) setError(e.response.data.message);
+      else if (isNetworkError(e)) setError('The server is taking too long to respond. Please check your internet connection or try again in a moment.');
+      else setError('Unable to connect to the server.');
     } finally {
       setLoading(false);
     }
   };
 
-  return <div className="auth-page"><div className="auth-card">
-    <div className="logo">💰</div>
-    <h1>Business Loan</h1>
-    <p className="muted">{register ? 'Create your account to manage business loans.' : 'Enter your username and password to continue.'}</p>
-    <form onSubmit={submit}>
+  return <div className="auth-page">
+    <MoneyRain variant="auth" />
+    <div className="auth-card">
+      <div className="auth-intro">
+        <div className="logo"><img src="/loan-icon.png" alt="Business Loan" /></div>
+        <span className="auth-kicker">SMART LOAN MANAGEMENT</span>
+        <h1>Business Loan</h1>
+        <p className="muted">{register ? 'Create your account to manage borrowers, loans, and payments.' : 'A simple way to track borrowers, payment schedules, and balances.'}</p>
+        <div className="how-it-works">
+          <div><b>01</b><span><strong>Register / Login</strong><small>Secure access to your account</small></span></div>
+          <div><b>02</b><span><strong>Create a Loan</strong><small>Set amount, interest, and terms</small></span></div>
+          <div><b>03</b><span><strong>Track Payments</strong><small>See the next due payment and balance</small></span></div>
+        </div>
+      </div>
+      <div className="auth-form-wrap">
+        <div className="auth-form-title">{register ? 'Create your account' : 'Welcome back'}</div>
+        <p className="auth-form-subtitle">{register ? 'Start managing your business loans today.' : 'Enter your credentials to continue.'}</p>
+        <form onSubmit={submit}>
       <label>Username<input value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} placeholder="Enter username" required /></label>
-      <label>Password<input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Enter password" required /></label>
-      {register && <label>Confirm Password<input type="password" value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Confirm password" required /></label>}
+      <label>Password<div className="password-field"><input type={showPassword ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Enter password" required /><button type="button" className="password-toggle" onClick={() => setShowPassword(v => !v)}>{showPassword ? 'Hide' : 'Show'}</button></div></label>
+      {register && <label>Confirm Password<div className="password-field"><input type={showConfirmPassword ? 'text' : 'password'} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Confirm password" required /><button type="button" className="password-toggle" onClick={() => setShowConfirmPassword(v => !v)}>{showConfirmPassword ? 'Hide' : 'Show'}</button></div></label>}
       {error && <div className="error">{error}</div>}
       <button className="primary full" disabled={loading}>{loading ? 'Please wait...' : register ? 'Create Account' : 'Login'}</button>
-    </form>
-    <div className="switch">{register ? <>Already have an account? <button onClick={() => { setRegister(false); setError(''); }}>Login</button></> : <>Don't have an account yet? <button onClick={() => { setRegister(true); setError(''); }}>Create an Account</button></>}</div>
-  </div></div>;
+        </form>
+        <div className="switch">{register ? <>Already have an account? <button onClick={() => { setRegister(false); setError(''); }}>Login</button></> : <>Don't have an account yet? <button onClick={() => { setRegister(true); setError(''); }}>Create an Account</button></>}</div>
+      </div>
+    </div>
+  </div>;
 }
 
 function App() {
-  const [user, setUser] = useState(() => localStorage.getItem('loan_token') ? { username: 'User' } : null);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('loan_user');
+    try { return localStorage.getItem('loan_token') ? (saved ? JSON.parse(saved) : { username: 'User' }) : null; } catch { return { username: 'User' }; }
+  });
   const [page, setPage] = useState('dashboard');
+  const [profileLoading, setProfileLoading] = useState(false);
   const [loans, setLoans] = useState([]);
   const [stats, setStats] = useState({});
   const [message, setMessage] = useState('');
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const logout = () => { localStorage.removeItem('loan_token'); setUser(null); };
+  const logout = () => { localStorage.removeItem('loan_token'); localStorage.removeItem('loan_user'); setUser(null); };
 
-  const load = async () => {
+  const load = async (silent = false) => {
+    if (!silent) setRefreshing(true);
     try {
       const [l, s] = await Promise.all([api.get('/loans'), api.get('/loans/dashboard')]);
       setLoans(l.data);
       setStats(s.data);
+      setLastUpdated(new Date());
+      if (!silent) setMessage('Data refreshed.');
+      return l.data;
     } catch (e) {
       if (e.response?.status === 401) logout();
-      else setMessage(e.response?.data?.message || 'Could not load data.');
+      else setMessage(e.response?.data?.message || (isNetworkError(e) ? 'Server connection lost. Please try again.' : 'Could not load data.'));
+    } finally {
+      if (!silent) setRefreshing(false);
     }
   };
 
-  useEffect(() => { if (user) load(); }, [user]);
+  useEffect(() => {
+    if (!user) return;
+    load(true);
+    const timer = window.setInterval(() => load(true), 30000);
+    return () => window.clearInterval(timer);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    setProfileLoading(true);
+    api.get('/auth/profile').then(r => {
+      if (!active) return;
+      const nextUser = r.data.user;
+      localStorage.setItem('loan_user', JSON.stringify(nextUser));
+      setUser(nextUser);
+    }).catch(() => {}).finally(() => { if (active) setProfileLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  const updateUser = nextUser => {
+    localStorage.setItem('loan_user', JSON.stringify(nextUser));
+    setUser(nextUser);
+  };
 
   if (!user) return <Auth onLogin={u => setUser(u)} />;
 
-  return <div className="app">
+  return <div className={`app page-${page}`}>
     <aside>
-      <div className="brand">💰 <span>Business Loan</span></div>
+      <div className="brand"><img src="/loan-icon.png" alt="Business Loan" /><span>Business Loan</span></div>
       <button className={page === 'dashboard' ? 'nav active' : 'nav'} onClick={() => setPage('dashboard')}>📊 Dashboard</button>
       <button className={page === 'loans' ? 'nav active' : 'nav'} onClick={() => setPage('loans')}>💳 Loans</button>
-      <div className="sidebar-bottom"><span>Signed in as <b>{user.username}</b></span><button className="logout" onClick={logout}>Log out</button></div>
+      <button className={page === 'profile' ? 'nav active' : 'nav'} onClick={() => setPage('profile')}>👤 Profile</button>
+      <div className="sidebar-bottom">
+        <button className="profile-mini" onClick={() => setPage('profile')} title="Open Profile">
+          <AvatarView value={user.avatar} username={user.username} />
+          <span>Signed in as <b>{user.username}</b></span>
+        </button>
+        <button className="logout" onClick={logout}>Log out</button>
+      </div>
     </aside>
     <main>
-      <header><div><h2>{page === 'dashboard' ? 'Dashboard' : 'Loans'}</h2><p className="muted">Manage your customers, loans, and payments.</p></div>{message && <div className="toast">{message}</div>}</header>
-      {page === 'dashboard' ? <Dashboard stats={stats} loans={loans} /> : <Loans loans={loans} reload={load} />}
+      <MoneyRain variant="page" />
+      <header><div><h2>{page === 'dashboard' ? 'Dashboard' : page === 'loans' ? 'Loans' : 'Profile'}</h2><p className="muted">{page === 'profile' ? 'Manage your account, avatar, and password.' : 'Manage your customers, loans, and payments.'}</p>{lastUpdated && page !== 'profile' && <p className="live-status">● Live data · Updated {lastUpdated.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })}</p>}</div><div className="header-actions">{message && <div className="toast">{message}</div>}{page !== 'profile' && <button className="refresh-btn" onClick={() => load()} disabled={refreshing}>{refreshing ? 'Refreshing…' : '↻ Refresh'}</button>}</div></header>
+      {page === 'dashboard' ? <Dashboard stats={stats} loans={loans} reload={load} /> : page === 'loans' ? <Loans loans={loans} reload={load} /> : <Profile user={user} onUserUpdate={updateUser} loading={profileLoading} />}
     </main>
   </div>;
 }
 
-function Dashboard({ stats, loans }) {
+function Dashboard({ stats, loans, reload }) {
+  const [selectedLoan, setSelectedLoan] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: '', principal: '', termCount: '', interestValue: '', startDate: '' });
+  const [busy, setBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [pocketName, setPocketName] = useState('');
+
+  const openLoan = loan => {
+    setEditingId(null);
+    setSelectedLoan(loan);
+  };
+
+  const startEdit = loan => {
+    setEditingId(loan._id);
+    setSelectedLoan(loan);
+    setEditForm({
+      name: loan.customer?.name || '',
+      principal: loan.principal,
+      termCount: loan.termCount,
+      interestValue: loan.interestValue,
+      startDate: loan.startDate ? localDateInput(loan.startDate) : localDateInput(loan.createdAt)
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ name: '', principal: '', termCount: '', interestValue: '', startDate: '' });
+  };
+
+  const update = async e => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api.put(`/loans/${editingId}`, {
+        borrowerName: editForm.name,
+        principal: Number(editForm.principal),
+        interestValue: Number(editForm.interestValue),
+        termCount: Number(editForm.termCount),
+        startDate: editForm.startDate
+      });
+      const fresh = await reload();
+      const updated = fresh?.find(l => l._id === editingId);
+      if (updated) setSelectedLoan(updated);
+      cancelEdit();
+    } catch (e) {
+      alert(e.response?.data?.message || 'Could not update loan.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async loan => {
+    const customerName = loan.customer?.name || 'this customer';
+    const confirmed = window.confirm(
+      `Delete the loan for ${customerName}?\n\nThis permanently removes the loan, its payment schedule, and its recorded payments. If this is the customer's only loan, their customer record will also be removed.\n\nContinue?`
+    );
+    if (!confirmed) return;
+
+    setBusy(true);
+    setDeletingId(loan._id);
+    try {
+      // Let the customer card visibly leave the screen before removing it from the database.
+      await new Promise(resolve => setTimeout(resolve, 650));
+      await api.delete(`/loans/${loan._id}`);
+      setSelectedLoan(null);
+      await reload();
+    } catch (e) {
+      alert(e.response?.data?.message || 'Could not delete loan.');
+    } finally {
+      setDeletingId(null);
+      setBusy(false);
+    }
+  };
+
+  const recordPayment = async (loan, payment) => {
+    const remaining = Number((payment.amount - payment.paidAmount).toFixed(2));
+    const amount = window.prompt(
+      `Customer: ${loan.customer?.name || 'Borrower'}\nPayment #${payment.installment}\nAmount due: ${peso(remaining)}\n\nEnter payment amount:`,
+      remaining.toFixed(2)
+    );
+    if (amount === null) return;
+
+    const received = Number(amount);
+    if (!received || received <= 0) {
+      alert('Please enter a valid payment amount.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await api.post(`/loans/${loan._id}/payments/${payment._id}`, { amount: received });
+      const fresh = await reload();
+      const updated = fresh?.find(l => l._id === loan._id);
+      if (updated) setSelectedLoan(updated);
+    } catch (e) {
+      alert(e.response?.data?.message || 'Could not record payment.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return <section>
     <div className="cards">
       <Stat title="Customers" value={stats.customers || 0} />
@@ -191,43 +553,303 @@ function Dashboard({ stats, loans }) {
       <Stat title="Total Payable" value={peso(stats.totalPayable)} />
       <Stat title="Remaining Balance" value={peso(stats.remaining)} />
     </div>
-    <div className="install-app-card">
+
+    <a className="install-app-card install-app-card-link" href="/Business-Loan.apk" download="Business-Loan.apk" aria-label="Download and install the Business Loan Android app">
       <div className="install-app-info">
-        <div className="install-app-icon">📱</div>
+        <div className="install-app-icon"><img src="/loan-icon.png" alt="Business Loan" /></div>
         <div>
           <h3>Install Business Loan App</h3>
-          <p className="muted small">Use the Android app for quick access to your loan management system.</p>
+          <p className="muted small">Tap anywhere here to download the Android app for your phone or tablet.</p>
         </div>
       </div>
-      <a className="install-app-button" href="/Business-Loan.apk" download="Business-Loan.apk" aria-label="Download Business Loan Android APK">
-        📲 Download APK
-      </a>
-    </div>
+      <span className="install-app-button">📲 Download &amp; Install</span>
+    </a>
+
     <div className="panel">
-      <div className="panel-title"><div><h3>Recent Loans</h3><p className="muted small">Loans added from the Loans page.</p></div></div>
-      {loans.length === 0 ? <Empty text="No loans yet. Go to Loans to add your first borrower." /> : <table><thead><tr><th>Customer</th><th>Loan</th><th>Interest</th><th>Total</th><th>Months</th><th>Status</th></tr></thead><tbody>
-        {loans.slice(0, 8).map(l => <tr key={l._id}><td>{l.customer?.name || '—'}</td><td>{peso(l.principal)}</td><td>{peso(l.interestAmount)}</td><td>{peso(l.totalPayable)}</td><td>{l.termCount}</td><td><span className={'badge ' + l.status.toLowerCase()}>{l.status}</span></td></tr>)}
-      </tbody></table>}
+      <div className="panel-title">
+        <div>
+          <h3>Recent Loans</h3>
+          <p className="muted small">Click a customer to open their loan, view the next payment, and record a payment.</p>
+        </div>
+      </div>
+
+      {loans.length === 0 ? <Empty text="No loans yet. Go to Loans to add your first borrower." /> : <div className="table-wrap">
+        <table className="dashboard-loan-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Loan</th>
+              <th>Interest</th>
+              <th>Total</th>
+              <th>Next Payment</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loans.slice(0, 8).map(l => {
+              const next = l.payments?.find(p => p.status !== 'Paid');
+              const nextRemaining = next ? Math.max(0, Number(next.amount || 0) - Number(next.paidAmount || 0)) : 0;
+              return <tr key={l._id} className={deletingId === l._id ? 'loan-row-deleting' : ''}>
+                <td>
+                  <button className="customer-link" onClick={() => openLoan(l)}>
+                    <span className="customer-avatar">{(l.customer?.name || 'B').trim().charAt(0).toUpperCase()}</span>
+                    <span>{l.customer?.name || '—'}</span>
+                  </button>
+                </td>
+                <td>{peso(l.principal)}</td>
+                <td>{peso(l.interestAmount)}</td>
+                <td>{peso(l.totalPayable)}</td>
+                <td>
+                  {next ? <div className="next-payment-cell">
+                    <strong>{peso(nextRemaining)}</strong>
+                    <small>{dateText(next.dueDate)}</small>
+                  </div> : <span className="muted">Fully paid</span>}
+                </td>
+                <td><span className={'badge ' + String(l.status || '').toLowerCase()}>{l.status}</span></td>
+                <td>
+                  <div className="table-actions">
+                    <button className="pay-btn" onClick={() => openLoan(l)}>View / Pay</button>
+                    <button className="edit-btn" onClick={() => startEdit(l)}>Edit</button>
+                    <button className="delete-btn" onClick={() => remove(l)} disabled={busy}>{deletingId === l._id ? '🗑️ Throwing…' : 'Delete'}</button>
+                  </div>
+                </td>
+              </tr>;
+            })}
+          </tbody>
+        </table>
+      </div>}
     </div>
+
+    {selectedLoan && <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && setSelectedLoan(null)}>
+      <div className="customer-modal" role="dialog" aria-modal="true" aria-label="Customer loan details">
+        <div className="modal-header">
+          <div>
+            <span className="modal-kicker">Customer loan</span>
+            <h3>{selectedLoan.customer?.name || 'Borrower'}</h3>
+            <p className="muted small">Review the balance and record the customer's payment here.</p>
+          </div>
+          <button className="modal-close" onClick={() => setSelectedLoan(null)} aria-label="Close">×</button>
+        </div>
+
+        {editingId === selectedLoan._id ? <form className="loan-edit-form modal-edit-form" onSubmit={update}>
+          <h4>Edit Loan</h4>
+          <div className="loan-edit-grid">
+            <label>Customer Name<input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} required /></label>
+            <label>Amount to Loan (₱)<input type="number" min="1" step="0.01" value={editForm.principal} onChange={e => setEditForm({ ...editForm, principal: e.target.value })} required /></label>
+            <label>Months to Pay<input type="number" min="1" step="1" value={editForm.termCount} onChange={e => setEditForm({ ...editForm, termCount: e.target.value })} required /></label>
+            <label>Interest (₱)<input type="number" min="0" step="0.01" value={editForm.interestValue} onChange={e => setEditForm({ ...editForm, interestValue: e.target.value })} required /></label>
+          </div>
+          <div className="actions">
+            <button className="primary" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save Changes'}</button>
+            <button type="button" onClick={cancelEdit}>Cancel</button>
+          </div>
+        </form> : <>
+          {(() => {
+            const collected = selectedLoan.payments?.reduce((sum, p) => sum + Number(p.paidAmount || 0), 0) || 0;
+            const remaining = Math.max(0, Number(selectedLoan.totalPayable || 0) - collected);
+            const next = selectedLoan.payments?.find(p => p.status !== 'Paid');
+            const nextRemaining = next ? Math.max(0, Number(next.amount || 0) - Number(next.paidAmount || 0)) : 0;
+            return <div className="customer-summary">
+              <div><span>Total Payable</span><strong>{peso(selectedLoan.totalPayable)}</strong></div>
+              <div><span>Total Paid</span><strong>{peso(collected)}</strong></div>
+              <div><span>Remaining</span><strong className="remaining-highlight">{peso(remaining)}</strong></div>
+              <div><span>Next Payment</span><strong>{next ? peso(nextRemaining) : 'None'}</strong><small>{next ? `Due ${dateText(next.dueDate)}` : 'Loan completed'}</small></div>
+            </div>;
+          })()}
+
+          <div className="modal-actions">
+            <button className="edit-btn" onClick={() => startEdit(selectedLoan)}>✏️ Edit Loan</button>
+            <button className="delete-btn" onClick={() => remove(selectedLoan)} disabled={busy}>🗑 Delete Loan</button>
+            <button className="primary" onClick={() => {
+              const next = selectedLoan.payments?.find(p => p.status !== 'Paid');
+              if (next) recordPayment(selectedLoan, next);
+            }} disabled={busy || !selectedLoan.payments?.some(p => p.status !== 'Paid')}>
+              💵 Record Next Payment
+            </button>
+          </div>
+
+          <div className="modal-schedule">
+            <div className="modal-section-heading">
+              <div><h4>Payment Schedule</h4><span className="muted small">Every 15 days</span></div>
+              {selectedLoan.status && <span className={'badge ' + selectedLoan.status.toLowerCase()}>{selectedLoan.status}</span>}
+            </div>
+            <div className="modal-payment-list">
+              {(selectedLoan.payments || []).map(p => {
+                const due = Math.max(0, Number(p.amount || 0) - Number(p.paidAmount || 0));
+                return <div className={'modal-payment-row ' + String(p.status || '').toLowerCase()} key={p._id}>
+                  <div><b>Payment #{p.installment}</b><small>Due {dateText(p.dueDate)}</small></div>
+                  <div><strong>{peso(due)}</strong><small>of {peso(p.amount)}</small></div>
+                  <span className={'badge ' + String(p.status || '').toLowerCase()}>{p.status}</span>
+                  {p.status !== 'Paid' && <button className="pay-btn" onClick={() => recordPayment(selectedLoan, p)} disabled={busy}>Record Payment</button>}
+                </div>;
+              })}
+            </div>
+          </div>
+        </>}
+      </div>
+    </div>}
   </section>;
 }
 
+
+function Profile({ user, onUserUpdate, loading }) {
+  const [username, setUsername] = useState(user.username || '');
+  const [avatar, setAvatar] = useState(user.avatar || '');
+  const [cropSource, setCropSource] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+
+  const prepareAvatarForSave = async () => {
+    if (!avatar?.startsWith?.('data:image/')) return avatar || '';
+    return await compressAvatarDataUrl(avatar, 640, 700000);
+  };
+
+  useEffect(() => {
+    setUsername(user.username || '');
+    setAvatar(user.avatar || '');
+  }, [user.username, user.avatar]);
+
+  const chooseAvatar = e => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Please choose an image file.'); return; }
+    if (file.size > 25 * 1024 * 1024) { setError('Please choose an image smaller than 25 MB.'); return; }
+    setError('');
+    setMessage('');
+    const reader = new FileReader();
+    reader.onload = () => setCropSource(String(reader.result));
+    reader.onerror = () => setError('Could not read the selected image.');
+    reader.readAsDataURL(file);
+  };
+
+  const openCropper = () => {
+    if (avatar?.startsWith('data:image/')) {
+      setError('');
+      setMessage('');
+      setCropSource(avatar);
+    }
+  };
+
+  const applyCrop = result => {
+    setAvatar(result);
+    setCropSource('');
+    setError('');
+    setMessage('Photo adjusted. Save your profile to apply it.');
+  };
+
+  const selectPreset = value => {
+    setAvatar(value);
+    setError('');
+    setMessage('Avatar selected. Save your profile to apply it.');
+  };
+
+  const saveProfile = async e => {
+    e.preventDefault();
+    setSaving(true); setError(''); setMessage('');
+    try {
+      const preparedAvatar = await prepareAvatarForSave();
+      const r = await api.put('/auth/profile', { username: username.trim(), avatar: preparedAvatar });
+      onUserUpdate(r.data.user);
+      setAvatar(r.data.user.avatar || preparedAvatar || '');
+      setMessage('Profile updated successfully.');
+    } catch (e) {
+      const serverMessage = e.response?.data?.message;
+      setError(serverMessage || (isNetworkError(e) ? 'Cannot reach the server. Please check your internet connection and make sure the Render backend is running.' : 'Could not update profile.'));
+    } finally { setSaving(false); }
+  };
+
+  const savePassword = async e => {
+    e.preventDefault();
+    setPasswordSaving(true); setError(''); setMessage('');
+    try {
+      const r = await api.put('/auth/profile/password', passwords);
+      setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setMessage(r.data.message || 'Password changed successfully.');
+    } catch (e) {
+      const serverMessage = e.response?.data?.message;
+      setError(serverMessage || (isNetworkError(e)
+        ? 'Cannot reach the production server. Check your internet connection and make sure the Render backend is running.'
+        : `Could not change password${e.response?.status ? ` (HTTP ${e.response.status})` : ''}.`));
+    } finally { setPasswordSaving(false); }
+  };
+
+  return <section className="profile-page">
+    <div className="profile-hero panel">
+      <div className="profile-hero-avatar">
+        <AvatarView value={avatar} username={username} />
+      </div>
+      <div><span className="modal-kicker">Account settings</span><h3>{username || 'User'}</h3><p className="muted">Personalize your Business Loan account and keep your login secure.</p></div>
+    </div>
+
+    {(message || error) && <div className={error ? 'error profile-message' : 'profile-success profile-message'}>{error || message}</div>}
+
+    <div className="profile-grid">
+      <form className="panel profile-card" onSubmit={saveProfile}>
+        <div className="profile-card-heading"><div><h3>Profile</h3><p className="muted small">Update your name and profile picture.</p></div><span className="settings-icon">⚙️</span></div>
+        <div className="avatar-upload">
+          <button type="button" className="avatar-large avatar-clickable" title={avatar?.startsWith('data:image/') ? 'Click to adjust your photo' : 'Click to choose a profile picture'} onClick={avatar?.startsWith('data:image/') ? openCropper : undefined}>
+            <AvatarView value={avatar} username={username} />
+            <span className="avatar-change-badge">{avatar?.startsWith('data:image/') ? '✎' : '+'}</span>
+            {!avatar?.startsWith('data:image/') && <input type="file" accept="image/*" onChange={chooseAvatar} hidden />}
+          </button>
+          <div className="avatar-controls">
+            <div className="avatar-actions">
+              <label className="upload-button"><input type="file" accept="image/*" onChange={chooseAvatar} hidden /> 📷 Upload Image</label>
+              <button type="button" className="remove-avatar" onClick={() => { setAvatar(''); setMessage(''); }} disabled={!avatar}>Remove</button>
+            </div>
+            <div className="avatar-presets"><span className="muted small">Choose an avatar</span><div className="avatar-preset-grid">{AVATAR_PRESETS.map(p => <button key={p.id} type="button" className={`avatar-preset-button ${avatar === p.value ? 'selected' : ''}`} title={p.label} aria-label={p.label} onClick={() => selectPreset(p.value)}><AvatarView value={p.value} username={username} /></button>)}</div></div>
+            <p className="muted small">JPG, PNG, or WEBP · Up to 25 MB selected · adjust position and zoom before saving.</p>
+          </div>
+        </div>
+        <label>Username<input value={username} onChange={e => setUsername(e.target.value)} minLength="2" required /></label>
+        <button className="primary full" type="submit" disabled={saving || loading}>{saving ? 'Saving…' : 'Save Profile'}</button>
+      </form>
+
+      <form className="panel profile-card" onSubmit={savePassword}>
+        <div className="profile-card-heading"><div><h3>Security</h3><p className="muted small">Change your password without creating a new account.</p></div><span className="settings-icon">🔐</span></div>
+        <label>Current Password<div className="password-field"><input type={showCurrentPassword ? 'text' : 'password'} value={passwords.currentPassword} onChange={e => setPasswords({ ...passwords, currentPassword: e.target.value })} required /><button type="button" className="password-toggle eye-toggle" onClick={() => setShowCurrentPassword(v => !v)} aria-label={showCurrentPassword ? 'Hide current password' : 'Show current password'}>{showCurrentPassword ? '🙈' : '👁️'}</button></div></label>
+        <label>New Password<div className="password-field"><input type={showNewPassword ? 'text' : 'password'} value={passwords.newPassword} onChange={e => setPasswords({ ...passwords, newPassword: e.target.value })} minLength="6" required /><button type="button" className="password-toggle eye-toggle" onClick={() => setShowNewPassword(v => !v)} aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}>{showNewPassword ? '🙈' : '👁️'}</button></div></label>
+        <label>Confirm New Password<div className="password-field"><input type={showConfirmNewPassword ? 'text' : 'password'} value={passwords.confirmPassword} onChange={e => setPasswords({ ...passwords, confirmPassword: e.target.value })} minLength="6" required /><button type="button" className="password-toggle eye-toggle" onClick={() => setShowConfirmNewPassword(v => !v)} aria-label={showConfirmNewPassword ? 'Hide confirmation password' : 'Show confirmation password'}>{showConfirmNewPassword ? '🙈' : '👁️'}</button></div></label>
+        <button className="primary full" type="submit" disabled={passwordSaving}>{passwordSaving ? 'Changing…' : 'Change Password'}</button>
+      </form>
+    </div>
+    {cropSource && <AvatarCropper source={cropSource} onCancel={() => setCropSource('')} onApply={applyCrop} />}
+  </section>;
+}
 
 function Stat({ title, value }) { return <div className="stat"><span>{title}</span><strong>{value}</strong></div>; }
 function Empty({ text }) { return <div className="empty">{text}</div>; }
 
 function Loans({ loans, reload }) {
-  const blank = { name: '', principal: 500, termCount: 1, interestValue: 100 };
+  const blank = { name: '', principal: 500, termCount: 1, interestValue: 100, startDate: localDateInput() };
   const [form, setForm] = useState(blank);
   const [showForm, setShowForm] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', principal: '', termCount: '', interestValue: '' });
+  const [editForm, setEditForm] = useState({ name: '', principal: '', termCount: '', interestValue: '', startDate: '' });
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [deletingId, setDeletingId] = useState(null);
+  const [pocketName, setPocketName] = useState('');
 
   const total = useMemo(() => Number(form.principal || 0) + Number(form.interestValue || 0), [form.principal, form.interestValue]);
   const payments = Math.max(1, Number(form.termCount || 1) * 2);
   const paymentAmount = total / payments;
+  const visibleLoans = useMemo(() => loans.filter(loan => {
+    const name = loan.customer?.name || '';
+    const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) || String(loan.principal).includes(search);
+    const matchesStatus = statusFilter === 'All' || loan.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  }), [loans, search, statusFilter]);
 
   const save = async e => {
     e.preventDefault();
@@ -241,11 +863,13 @@ function Loans({ loans, reload }) {
         termCount: Number(form.termCount),
         termUnit: 'months',
         frequency: '15days',
-        startDate: new Date().toISOString().slice(0, 10)
+        startDate: form.startDate || localDateInput()
       });
+      const savedName = form.name.trim();
       setForm(blank);
       setShowForm(false);
       await reload();
+      setPocketName(savedName);
     } catch (e) {
       alert(e.response?.data?.message || 'Could not create loan.');
     } finally {
@@ -260,14 +884,15 @@ function Loans({ loans, reload }) {
       name: loan.customer?.name || '',
       principal: loan.principal,
       termCount: loan.termCount,
-      interestValue: loan.interestValue
+      interestValue: loan.interestValue,
+      startDate: loan.startDate ? localDateInput(loan.startDate) : localDateInput(loan.createdAt)
     });
     setExpanded(null);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditForm({ name: '', principal: '', termCount: '', interestValue: '' });
+    setEditForm({ name: '', principal: '', termCount: '', interestValue: '', startDate: '' });
   };
 
   const update = async e => {
@@ -277,7 +902,8 @@ function Loans({ loans, reload }) {
         borrowerName: editForm.name,
         principal: Number(editForm.principal),
         interestValue: Number(editForm.interestValue),
-        termCount: Number(editForm.termCount)
+        termCount: Number(editForm.termCount),
+        startDate: editForm.startDate
       });
       cancelEdit();
       await reload();
@@ -289,16 +915,21 @@ function Loans({ loans, reload }) {
   const remove = async loan => {
     const customerName = loan.customer?.name || 'this customer';
     const confirmed = window.confirm(
-      `Delete the loan for ${customerName}?\n\nThis cannot be undone. Loans with recorded payments cannot be deleted.`
+      `Delete the loan for ${customerName}?\n\nThis permanently removes the loan, its payment schedule, and its recorded payments. If this is the customer's only loan, their customer record will also be removed.\n\nContinue?`
     );
     if (!confirmed) return;
 
+    setDeletingId(loan._id);
     try {
+      // Give the card a short throw-away animation before deleting the record.
+      await new Promise(resolve => setTimeout(resolve, 650));
       await api.delete(`/loans/${loan._id}`);
       if (expanded === loan._id) setExpanded(null);
       await reload();
     } catch (e) {
       alert(e.response?.data?.message || 'Could not delete loan.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -315,6 +946,7 @@ function Loans({ loans, reload }) {
   };
 
   return <section>
+    {pocketName && <PocketDepositAnimation name={pocketName} onDone={() => setPocketName('')} />}
     <div className="loan-intro"><div><h3>Customers & Loans</h3><p className="muted">Add someone who wants to borrow from you. You set the loan amount, months, and interest.</p></div><button className="primary" onClick={() => setShowForm(v => !v)}>{showForm ? 'Close Form' : '+ Add Loan'}</button></div>
 
     {showForm && <div className="panel loan-form-panel">
@@ -322,6 +954,7 @@ function Loans({ loans, reload }) {
       <p className="muted small">The payment schedule is automatically calculated every 15 days. Interest is a fixed amount that you can set for each borrower.</p>
       <form className="loan-form" onSubmit={save}>
         <label>Customer Name<input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Enter customer's name" required /></label>
+        <label className="calendar-field">📅 Loan Start Date<input type="date" value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} required /></label>
         <label>Amount to Loan (₱)<input type="number" min="1" step="0.01" value={form.principal} onChange={e => setForm({ ...form, principal: e.target.value })} required /></label>
         <label>How Many Months to Pay?<input type="number" min="1" step="1" value={form.termCount} onChange={e => setForm({ ...form, termCount: e.target.value })} required /></label>
         <label>Your Interest (₱)<input type="number" min="0" step="0.01" value={form.interestValue} onChange={e => setForm({ ...form, interestValue: e.target.value })} required /></label>
@@ -335,14 +968,14 @@ function Loans({ loans, reload }) {
     </div>}
 
     <div className="panel">
-      <div className="panel-title"><div><h3>Loan List</h3><p className="muted small">Every loan keeps its own payment schedule.</p></div></div>
-      {loans.length === 0 ? <Empty text="No loans yet. Add a borrower above." /> : <div className="loan-list">{loans.map(loan => {
+      <div className="panel-title"><div><h3>Loan List</h3><p className="muted small">Every loan keeps its own payment schedule.</p></div><div className="loan-filters"><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search borrower or amount" /><select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option>All</option><option>Active</option><option>Completed</option></select></div></div>
+      {loans.length === 0 ? <Empty text="No loans yet. Add a borrower above." /> : visibleLoans.length === 0 ? <Empty text="No loans match your search." /> : <div className="loan-list">{visibleLoans.map(loan => {
         const collected = loan.payments?.reduce((s, p) => s + Number(p.paidAmount || 0), 0) || 0;
         const remaining = Math.max(0, Number(loan.totalPayable || 0) - collected);
         const next = loan.payments?.find(p => p.status !== 'Paid');
-        return <div className="loan-card" key={loan._id}>
+        return <div className={`loan-card ${deletingId === loan._id ? 'loan-card-deleting' : ''}`} key={loan._id}>
           <div className="loan-card-top">
-            <div><h3>{loan.customer?.name || 'Borrower'}</h3><span className="muted">Loan created {dateText(loan.createdAt)}</span></div>
+            <div><h3>{loan.customer?.name || 'Borrower'}</h3><span className="muted">Loan date: {dateText(loan.startDate || loan.createdAt)} · Recorded {dateText(loan.createdAt)}</span></div>
             <span className={'badge ' + loan.status.toLowerCase()}>{loan.status}</span>
           </div>
           <div className="loan-details">
@@ -351,18 +984,20 @@ function Loans({ loans, reload }) {
             <div><span>Total</span><strong>{peso(loan.totalPayable)}</strong></div>
             <div><span>Term</span><strong>{loan.termCount} month{loan.termCount === 1 ? '' : 's'}</strong></div>
             <div><span>Remaining</span><strong>{peso(remaining)}</strong></div>
+            <div><span>Loan Date</span><strong>{dateText(loan.startDate || loan.createdAt)}</strong></div>
             <div><span>Next Payment</span><strong>{next ? `${peso(next.amount - next.paidAmount)} · ${dateText(next.dueDate)}` : 'None'}</strong></div>
           </div>
           <div className="loan-card-actions">
             <button onClick={() => setExpanded(expanded === loan._id ? null : loan._id)}>{expanded === loan._id ? 'Hide Schedule' : 'View Schedule'}</button>
             <button className="primary" onClick={() => downloadLoanReceipt(loan)}>Download Receipt</button>
             <button className="edit-btn" onClick={() => startEdit(loan)}>Edit</button>
-            <button className="delete-btn" onClick={() => remove(loan)}>Delete</button>
+            <button className="delete-btn" onClick={() => remove(loan)} disabled={deletingId !== null}>{deletingId === loan._id ? '🗑️ Throwing…' : 'Delete'}</button>
           </div>
           {editingId === loan._id && <form className="loan-edit-form" onSubmit={update}>
             <h4>Edit Loan</h4>
             <div className="loan-edit-grid">
               <label>Customer Name<input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} required /></label>
+              <label className="calendar-field">📅 Loan Start Date<input type="date" value={editForm.startDate} onChange={e => setEditForm({ ...editForm, startDate: e.target.value })} required /></label>
               <label>Amount to Loan (₱)<input type="number" min="1" step="0.01" value={editForm.principal} onChange={e => setEditForm({ ...editForm, principal: e.target.value })} required /></label>
               <label>Months to Pay<input type="number" min="1" step="1" value={editForm.termCount} onChange={e => setEditForm({ ...editForm, termCount: e.target.value })} required /></label>
               <label>Interest (₱)<input type="number" min="0" step="0.01" value={editForm.interestValue} onChange={e => setEditForm({ ...editForm, interestValue: e.target.value })} required /></label>
@@ -372,7 +1007,7 @@ function Loans({ loans, reload }) {
               <button type="button" onClick={cancelEdit}>Cancel</button>
             </div>
           </form>}
-          {expanded === loan._id && <div className="schedule"><h4>Payment Schedule</h4>{loan.payments.map(p => <div className="payment-row" key={p._id}><span><b>Payment #{p.installment}</b><small>{dateText(p.dueDate)}</small></span><span>{peso(p.amount)}<small>Paid: {peso(p.paidAmount)}</small></span><span className={'badge ' + p.status.toLowerCase()}>{p.status}</span>{p.status !== 'Paid' && <button onClick={() => pay(loan, p)}>Record Payment</button>}</div>)}</div>}
+          {expanded === loan._id && <div className="schedule"><div className="schedule-heading"><div><h4>Payment Schedule</h4><small>Loan started {dateText(loan.startDate || loan.createdAt)} · Every 15 days</small></div><span className="calendar-chip">📅 {dateText(loan.startDate || loan.createdAt)}</span></div>{loan.payments.map(p => <div className="payment-row" key={p._id}><span><b>Payment #{p.installment}</b><small>{dateText(p.dueDate)}</small></span><span>{peso(p.amount)}<small>Paid: {peso(p.paidAmount)}</small></span><span className={'badge ' + p.status.toLowerCase()}>{p.status}</span>{p.status !== 'Paid' && <button onClick={() => pay(loan, p)}>Record Payment</button>}</div>)}</div>}
         </div>;
       })}</div>}
     </div>
