@@ -4,6 +4,8 @@ import api, { isNetworkError } from './api';
 import { Capacitor } from '@capacitor/core';
 import { jsPDF } from 'jspdf';
 import './styles.css';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 const peso = n => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dateText = d => new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -191,7 +193,7 @@ function AvatarCropper({ source, onCancel, onApply }) {
 }
 
 
-function downloadLoanReceipt(loan) {
+async function downloadLoanReceipt(loan) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const left = 20;
   const right = 190;
@@ -293,19 +295,57 @@ function downloadLoanReceipt(loan) {
 
   const safeBorrower = borrower.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'borrower';
   const fileName = `${receiptNo}-${safeBorrower}.pdf`;
-  // Use a Blob + temporary download link so the receipt is downloaded directly
-  // instead of being handed to the system PDF viewer (which can fail when an
-  // older copy of the same receipt is still open in Acrobat).
   const blob = doc.output('blob');
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = fileName;
-  anchor.style.display = 'none';
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+  try {
+    // Native Android: save the PDF in the app cache and open the Android
+    // share/save sheet. This avoids WebView <a download> limitations.
+    if (Capacitor.isNativePlatform()) {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = String(reader.result || '');
+          resolve(result.includes(',') ? result.split(',')[1] : result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      await Filesystem.writeFile({
+        path: fileName,
+        data: base64,
+        directory: Directory.Cache,
+        recursive: true
+      });
+
+      const { uri } = await Filesystem.getUri({
+        path: fileName,
+        directory: Directory.Cache
+      });
+
+      await Share.share({
+        title: 'Business Loan Receipt',
+        text: `Loan receipt for ${borrower}`,
+        files: [uri],
+        dialogTitle: 'Save or share receipt'
+      });
+      return;
+    }
+
+    // Browser/Vercel: keep the normal direct download.
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+  } catch (error) {
+    console.error('Receipt download failed:', error);
+    alert(`Unable to create the receipt. ${error?.message || 'Please try again.'}`);
+  }
 }
 
 function MoneyRain({ variant = 'app' }) {
@@ -322,23 +362,75 @@ function MoneyRain({ variant = 'app' }) {
   </div>;
 }
 
+function PaymentFormModal({ loan, payment, amount, date, onAmountChange, onDateChange, onCancel, onSubmit, busy }) {
+  if (!loan || !payment) return null;
+  const remaining = Math.max(0, Number(payment.amount || 0) - Number(payment.paidAmount || 0));
+  return <div className="payment-form-overlay" role="dialog" aria-modal="true" aria-label="Record payment">
+    <form className="payment-form-card" onSubmit={onSubmit}>
+      <div className="modal-header">
+        <div><span className="modal-kicker">Payment entry</span><h3>Record Payment #{payment.installment}</h3><p className="muted small">{loan.customer?.name || 'Borrower'} · Remaining {peso(remaining)}</p></div>
+        <button type="button" className="modal-close" onClick={onCancel} aria-label="Close">×</button>
+      </div>
+      <div className="payment-form-grid">
+        <label>Payment Amount (₱)<input type="number" min="0.01" max={remaining} step="0.01" value={amount} onChange={e => onAmountChange(e.target.value)} placeholder={remaining.toFixed(2)} required autoFocus /></label>
+        <label>Date Paid<input type="date" value={date} onChange={e => onDateChange(e.target.value)} required /></label>
+      </div>
+      <p className="muted small payment-form-note">You can change the payment date before saving. Use the actual date the borrower paid, even if you are recording it later.</p>
+      <div className="actions"><button type="button" onClick={onCancel} disabled={busy}>Cancel</button><button className="primary" type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save Payment'}</button></div>
+    </form>
+  </div>;
+}
+
 function Auth({ onLogin }) {
   const [register, setRegister] = useState(false);
   const [form, setForm] = useState({ username: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+
+  const clearAuthForm = () => {
+    setForm({ username: '', password: '', confirmPassword: '' });
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setError('');
+    setMessage('');
+  };
+
+  const openRegister = () => {
+    clearAuthForm();
+    setRegister(true);
+  };
+
+  const openLogin = () => {
+    clearAuthForm();
+    setRegister(false);
+  };
 
   const submit = async e => {
     e.preventDefault();
     setError('');
+    setMessage('');
     setLoading(true);
     try {
       const r = await api.post(`/auth/${register ? 'register' : 'login'}`, form);
+
+      if (register) {
+        // Registration only creates the account. Do not automatically log in
+        // or copy the newly-created account into the login session.
+        clearAuthForm();
+        setRegister(false);
+        setMessage('Account created successfully. Please log in with your new account.');
+        return;
+      }
+
+      // Only a real login stores the active session.
       localStorage.setItem('loan_token', r.data.token);
       localStorage.setItem('loan_user', JSON.stringify(r.data.user));
-      onLogin(r.data.user);
+      setLoginSuccess(true);
+      window.setTimeout(() => onLogin(r.data.user), 1250);
     } catch (e) {
       if (e.response?.data?.message) setError(e.response.data.message);
       else if (isNetworkError(e)) setError('The server is taking too long to respond. Please check your internet connection or try again in a moment.');
@@ -348,8 +440,15 @@ function Auth({ onLogin }) {
     }
   };
 
-  return <div className="auth-page">
+  return <div className={`auth-page ${loginSuccess ? 'login-success-active' : ''}`}>
     <MoneyRain variant="auth" />
+    {loginSuccess && <div className="login-transition" aria-live="polite">
+      <div className="login-wallet-scene">
+        <div className="login-money-bill">₱</div><div className="login-wallet">💼</div>
+        <span className="login-coin coin-1">₱</span><span className="login-coin coin-2">₱</span><span className="login-coin coin-3">₱</span>
+      </div>
+      <strong>Welcome back!</strong><small>Opening your Business Loan account…</small>
+    </div>}
     <div className="auth-card">
       <div className="auth-intro">
         <div className="logo"><img src="/loan-icon.png" alt="Business Loan" /></div>
@@ -370,9 +469,10 @@ function Auth({ onLogin }) {
       <label>Password<div className="password-field"><input type={showPassword ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Enter password" required /><button type="button" className="password-toggle" onClick={() => setShowPassword(v => !v)}>{showPassword ? 'Hide' : 'Show'}</button></div></label>
       {register && <label>Confirm Password<div className="password-field"><input type={showConfirmPassword ? 'text' : 'password'} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Confirm password" required /><button type="button" className="password-toggle" onClick={() => setShowConfirmPassword(v => !v)}>{showConfirmPassword ? 'Hide' : 'Show'}</button></div></label>}
       {error && <div className="error">{error}</div>}
+      {message && <div className="profile-success profile-message">{message}</div>}
       <button className="primary full" disabled={loading}>{loading ? 'Please wait...' : register ? 'Create Account' : 'Login'}</button>
         </form>
-        <div className="switch">{register ? <>Already have an account? <button onClick={() => { setRegister(false); setError(''); }}>Login</button></> : <>Don't have an account yet? <button onClick={() => { setRegister(true); setError(''); }}>Create an Account</button></>}</div>
+        <div className="switch">{register ? <>Already have an account? <button type="button" onClick={openLogin}>Login</button></> : <>Don't have an account yet? <button type="button" onClick={openRegister}>Create an Account</button></>}</div>
       </div>
     </div>
   </div>;
@@ -512,6 +612,11 @@ function paymentWithLocalOverride(loan, payment) {
   return { ...payment, ...override, dueDate };
 }
 
+function paymentDisplayDate(loan, payment) {
+  const effective = paymentWithLocalOverride(loan, payment);
+  return payment.paidAt || effective.dueDate;
+}
+
 function Dashboard({ stats, loans, reload }) {
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -521,6 +626,9 @@ function Dashboard({ stats, loans, reload }) {
   const [pocketName, setPocketName] = useState('');
   const [editingStartDate, setEditingStartDate] = useState(null);
   const [startDateValue, setStartDateValue] = useState('');
+  const [paymentTarget, setPaymentTarget] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(localDateInput());
 
   const openLoan = loan => {
     setEditingId(null);
@@ -589,35 +697,34 @@ function Dashboard({ stats, loans, reload }) {
     }
   };
 
-  const recordPayment = async (loan, payment) => {
+  const recordPayment = (loan, payment) => {
     const remaining = Number((payment.amount - payment.paidAmount).toFixed(2));
-    const amount = window.prompt(
-      `Customer: ${loan.customer?.name || 'Borrower'}\nPayment #${payment.installment}\nAmount due: ${peso(remaining)}\n\nEnter payment amount:`,
-      remaining.toFixed(2)
-    );
-    if (amount === null) return;
+    setPaymentTarget({ loan, payment });
+    setPaymentAmount(remaining.toFixed(2));
+    setPaymentDate(localDateInput());
+  };
 
-    const received = Number(amount);
-    if (!received || received <= 0) {
-      alert('Please enter a valid payment amount.');
+  const submitPayment = async e => {
+    e.preventDefault();
+    if (!paymentTarget) return;
+    const { loan, payment } = paymentTarget;
+    const remaining = Number((payment.amount - payment.paidAmount).toFixed(2));
+    const received = Number(paymentAmount);
+    if (!received || received <= 0 || received > remaining) {
+      alert(`Please enter an amount from ₱0.01 to ₱${remaining.toFixed(2)}.`);
       return;
     }
-
+    if (!paymentDate) { alert('Please select the date the payment was made.'); return; }
     setBusy(true);
     try {
-      await api.post(`/loans/${loan._id}/payments/${payment._id}`, { amount: received });
+      await api.post(`/loans/${loan._id}/payments/${payment._id}`, { amount: received, paidAt: paymentDate });
       const fresh = await reload();
       const updated = fresh?.find(l => l._id === loan._id);
-      const updatedPayment = updated?.payments?.find(p => p._id === payment._id);
-      if (updatedPayment?.status === 'Paid') {
-        setPaymentScheduleOverride(loan._id, payment._id, { dueDate: localDateInput() });
-      }
       if (updated) setSelectedLoan(updated);
+      setPaymentTarget(null);
     } catch (e) {
       alert(e.response?.data?.message || 'Could not record payment.');
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   };
 
   const openStartDateEditor = loan => {
@@ -787,7 +894,7 @@ function Dashboard({ stats, loans, reload }) {
                 const due = Math.max(0, Number(effective.amount || 0) - Number(effective.paidAmount || 0));
                 const isNext = selectedLoan.payments?.find(x => x.status !== 'Paid')?._id === p._id;
                 return <div className={'modal-payment-row ' + String(p.status || '').toLowerCase()} key={p._id}>
-                  <div><b>Payment #{p.installment}</b><small>{p.status === 'Paid' ? 'Paid ' : 'Due '}{dateText(effective.dueDate)}</small></div>
+                  <div><b>Payment #{p.installment}</b><small>{p.paidAt ? 'Paid ' : (p.status === 'Paid' ? 'Paid ' : 'Due ')}{dateText(paymentDisplayDate(selectedLoan, p))}</small></div>
                   <div><strong>{peso(due)}</strong><small>of {peso(effective.amount)}</small></div>
                   <span className={'badge ' + String(p.status || '').toLowerCase()}>{p.status}</span>
                   <div className="payment-row-actions">
@@ -808,6 +915,17 @@ function Dashboard({ stats, loans, reload }) {
               <div className="actions"><button type="button" onClick={() => setEditingStartDate(null)}>Cancel</button><button className="primary" type="submit">Save Start Date</button></div>
             </form>
           </div>}
+          {paymentTarget && <PaymentFormModal
+            loan={paymentTarget.loan}
+            payment={paymentTarget.payment}
+            amount={paymentAmount}
+            date={paymentDate}
+            onAmountChange={setPaymentAmount}
+            onDateChange={setPaymentDate}
+            onCancel={() => setPaymentTarget(null)}
+            onSubmit={submitPayment}
+            busy={busy}
+          />}
 
         </>}
       </div>
@@ -968,6 +1086,9 @@ function Loans({ loans, reload }) {
   const [pocketName, setPocketName] = useState('');
   const [editingStartDate, setEditingStartDate] = useState(null);
   const [startDateValue, setStartDateValue] = useState('');
+  const [paymentTarget, setPaymentTarget] = useState(null);
+  const [paymentEntryAmount, setPaymentEntryAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(localDateInput());
 
   const total = useMemo(() => Number(form.principal || 0) + Number(form.interestValue || 0), [form.principal, form.interestValue]);
   const payments = Math.max(1, Number(form.termCount || 1) * 2);
@@ -1061,21 +1182,32 @@ function Loans({ loans, reload }) {
     }
   };
 
-  const pay = async (loan, payment) => {
+  const pay = (loan, payment) => {
     const remaining = Number((payment.amount - payment.paidAmount).toFixed(2));
-    const amount = prompt(`Payment due: ${peso(remaining)}\nEnter payment amount:`);
-    if (amount === null) return;
+    setPaymentTarget({ loan, payment });
+    setPaymentEntryAmount(remaining.toFixed(2));
+    setPaymentDate(localDateInput());
+  };
+
+  const submitPayment = async e => {
+    e.preventDefault();
+    if (!paymentTarget) return;
+    const { loan, payment } = paymentTarget;
+    const remaining = Number((payment.amount - payment.paidAmount).toFixed(2));
+    const received = Number(paymentEntryAmount);
+    if (!received || received <= 0 || received > remaining) {
+      alert(`Please enter an amount from ₱0.01 to ₱${remaining.toFixed(2)}.`);
+      return;
+    }
+    if (!paymentDate) { alert('Please select the date the payment was made.'); return; }
+    setSaving(true);
     try {
-      await api.post(`/loans/${loan._id}/payments/${payment._id}`, { amount: Number(amount) });
-      const fresh = await reload();
-      const updated = fresh?.find(l => l._id === loan._id);
-      const updatedPayment = updated?.payments?.find(p => p._id === payment._id);
-      if (updatedPayment?.status === 'Paid') {
-        setPaymentScheduleOverride(loan._id, payment._id, { dueDate: localDateInput() });
-      }
+      await api.post(`/loans/${loan._id}/payments/${payment._id}`, { amount: received, paidAt: paymentDate });
+      await reload();
+      setPaymentTarget(null);
     } catch (e) {
       alert(e.response?.data?.message || 'Could not record payment.');
-    }
+    } finally { setSaving(false); }
   };
 
   const openStartDateEditor = loan => {
@@ -1169,10 +1301,21 @@ function Loans({ loans, reload }) {
               <button type="button" onClick={cancelEdit}>Cancel</button>
             </div>
           </form>}
-          {expanded === loan._id && <div className="schedule"><div className="schedule-heading"><div><h4>Payment Schedule</h4><small>Loan started {dateText(effectiveLoanStartDate(loan))} · Every 15 days</small></div><div className="schedule-heading-actions"><button className="edit-btn" onClick={() => openStartDateEditor(loan)}>✏️ Edit Start Date</button><span className="calendar-chip">📅 {dateText(effectiveLoanStartDate(loan))}</span></div></div>{loan.payments.map(p => { const effective = paymentWithLocalOverride(loan, p); const isNext = loan.payments.find(x => x.status !== 'Paid')?._id === p._id; return <div className="payment-row" key={p._id}><span><b>Payment #{p.installment}</b><small>{p.status === 'Paid' ? 'Paid ' : 'Due '}{dateText(effective.dueDate)}</small></span><span>{peso(effective.amount)}<small>Paid: {peso(effective.paidAmount)}</small></span><span className={'badge ' + p.status.toLowerCase()}>{p.status}</span><div className="payment-row-actions">{isNext && p.status !== 'Paid' && <button onClick={() => pay(loan, p)}>Record Payment</button>}</div></div>; })}</div>}
+          {expanded === loan._id && <div className="schedule"><div className="schedule-heading"><div><h4>Payment Schedule</h4><small>Loan started {dateText(effectiveLoanStartDate(loan))} · Every 15 days</small></div><div className="schedule-heading-actions"><button className="edit-btn" onClick={() => openStartDateEditor(loan)}>✏️ Edit Start Date</button><span className="calendar-chip">📅 {dateText(effectiveLoanStartDate(loan))}</span></div></div>{loan.payments.map(p => { const effective = paymentWithLocalOverride(loan, p); const isNext = loan.payments.find(x => x.status !== 'Paid')?._id === p._id; return <div className="payment-row" key={p._id}><span><b>Payment #{p.installment}</b><small>{p.paidAt ? 'Paid ' : (p.status === 'Paid' ? 'Paid ' : 'Due ')}{dateText(paymentDisplayDate(loan, p))}</small></span><span>{peso(effective.amount)}<small>Paid: {peso(effective.paidAmount)}</small></span><span className={'badge ' + p.status.toLowerCase()}>{p.status}</span><div className="payment-row-actions">{isNext && p.status !== 'Paid' && <button onClick={() => pay(loan, p)}>Record Payment</button>}</div></div>; })}</div>}
         </div>;
       })}</div>}
     </div>
+    {paymentTarget && <PaymentFormModal
+      loan={paymentTarget.loan}
+      payment={paymentTarget.payment}
+      amount={paymentEntryAmount}
+      date={paymentDate}
+      onAmountChange={setPaymentEntryAmount}
+      onDateChange={setPaymentDate}
+      onCancel={() => setPaymentTarget(null)}
+      onSubmit={submitPayment}
+      busy={saving}
+    />}
     {editingStartDate && <div className="payment-edit-overlay" role="dialog" aria-modal="true" aria-label="Edit loan start date">
       <form className="payment-edit-card" onSubmit={saveStartDate}>
         <div className="modal-header"><div><span className="modal-kicker">Loan schedule</span><h3>Edit Loan Start Date</h3><p className="muted small">Choose the correct date the borrower actually received the loan.</p></div><button type="button" className="modal-close" onClick={() => setEditingStartDate(null)} aria-label="Close">×</button></div>
